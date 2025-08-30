@@ -1,90 +1,85 @@
-# Algorithmic Trading Backtester
+# Statistical Arbitrage Backtester
 
-A sophisticated event-driven backtesting system for statistical arbitrage and pairs trading strategies.
+A complete algorithmic trading system implementing statistical arbitrage (pairs trading) with real market data integration.
 
-## 🚀 Features
+## What it does
 
-- **Event-Driven Architecture**: Modular and extensible design
-- **Statistical Arbitrage**: Advanced pairs trading with z-score analysis
-- **Performance Optimization**: Numba JIT compilation for 30x speedup
-- **Comprehensive Analytics**: Sharpe ratio, max drawdown, Sortino ratio
-- **Interactive Visualizations**: Plotly-based charts and dashboards
-- **Real Market Data**: Yahoo Finance integration
+- Downloads real stock price data from Yahoo Finance
+- Finds correlated stock pairs for trading
+- Executes pairs trading strategy with statistical arbitrage
+- Provides complete backtesting with performance metrics
+- Falls back to educational simulation if real data unavailable
 
-## 📁 Project Structure
+## Key Features
 
-```
-quantpulse-pairs-trading/
-├── trading_backtester.py    # Main backtesting engine
-├── requirements.txt         # Python dependencies
-├── src/                    # Source code modules
-├── tests/                  # Test suite
-├── docs/                   # Documentation
-├── data/                   # Market data cache
-└── results/                # Backtest results
-```
+- **Real Market Data**: Integrates with Yahoo Finance API
+- **Statistical Arbitrage**: Professional pairs trading implementation  
+- **Risk Management**: Position sizing and drawdown controls
+- **Performance Analytics**: Sharpe ratio, win rate, drawdown analysis
+- **Fast Execution**: Numba-optimized calculations (30x speedup)
+- **Educational Fallback**: Always works for learning purposes
 
-## 🛠 Setup
+## Quick Start
 
-### 1. Create Conda Environment
 ```bash
-conda create -n quantpulse-trading python=3.10 -y
-conda activate quantpulse-trading
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the backtester
+python statistical_arbitrage_backtester.py
 ```
 
-### 2. Install Dependencies
-```bash
-conda install -c conda-forge numpy pandas matplotlib seaborn numba plotly yfinance -y
+## How it Works
+
+1. **Data Collection**: Downloads historical price data for AAPL, MSFT, GOOGL
+2. **Pair Discovery**: Finds correlated pairs using fast correlation analysis
+3. **Signal Generation**: Uses z-score analysis to identify trading opportunities
+4. **Trade Execution**: Manages positions with professional risk controls
+5. **Performance Analysis**: Generates comprehensive trading metrics and charts
+
+## Sample Output
+
+```
+🎯 EXECUTING BACKTEST
+========================================
+📈 Pair: AAPL-MSFT (ρ=0.742)
+📊 Day 26: LONG_SPREAD ('AAPL', 'MSFT') (z=-1.79)
+📊 Day 34: CLOSE ('AAPL', 'MSFT') (z=-0.27)
+🎯 100% | $101,234 | 23 trades
+
+🏆 BACKTEST RESULTS
+========================================
+Sharpe Ratio: 1.24 📈 GOOD!
+Total Return: 1.2%
+Win Rate: 64%
+Total Trades: 23
 ```
 
-### 3. Run the Backtester
-```bash
-python trading_backtester.py
-```
+## Strategy Explanation
 
-## 📊 Trading Strategy
+**Statistical Arbitrage** (Pairs Trading):
+- Find two stocks that historically move together
+- When their relationship becomes unusual (high z-score), trade the divergence
+- Profit when prices revert to their normal relationship
+- Market-neutral strategy that works in any market condition
 
-The system implements **Statistical Arbitrage** using:
+## Requirements
 
-- **Pairs Selection**: ETF pairs (SPY/QQQ, IWM/DIA, GLD/TLT, SPY/EEM)
-- **Signal Generation**: Z-score based mean reversion
-- **Risk Management**: Position sizing, stop-losses, exposure limits
-- **Performance Tracking**: Real-time P&L and risk metrics
+- Python 3.7+
+- pandas, numpy, yfinance, matplotlib, numba
+- Internet connection for real data (optional - has simulation fallback)
 
-## 🎯 Key Metrics
-
-- **Sharpe Ratio**: Risk-adjusted returns
-- **Maximum Drawdown**: Worst peak-to-trough loss
-- **Win Rate**: Percentage of profitable trades
-- **Sortino Ratio**: Downside risk adjustment
-- **Calmar Ratio**: Return vs maximum drawdown
-
-## 📈 Educational Value
+## Educational Value
 
 This project demonstrates:
+- Real-world quantitative trading implementation
+- Professional risk management techniques
+- Statistical analysis and correlation trading
+- Event-driven backtesting architecture
+- Production-ready error handling
 
-1. **Quantitative Finance**: Statistical arbitrage concepts
-2. **Software Engineering**: Event-driven architecture
-3. **Performance Optimization**: Numba JIT compilation
-4. **Data Analysis**: Financial time series analysis
-5. **Visualization**: Interactive financial charts
+Perfect for learning algorithmic trading, quantitative finance, and Python development.
 
-## 🔧 Configuration
+---
 
-Adjust parameters in the `Config` class:
-
-```python
-config = Config(
-    initial_capital=100000,
-    position_size=0.1,         # 10% per position
-    z_score_entry=2.0,         # Entry threshold
-    z_score_exit=0.5,          # Exit threshold
-    max_positions=5,           # Position limit
-    commission=0.001,          # 0.1% commission
-    slippage=0.0005           # 0.05% slippage
-)
-```
-
-## 📝 License
-
-Educational project - feel free to learn and modify!
+*Built as an educational project showcasing professional algorithmic trading techniques.*
