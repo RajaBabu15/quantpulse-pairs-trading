@@ -50,11 +50,15 @@ class NanosecondHFTEngine:
     def __init__(self, symbols: List[str], window: int = 1024,
                  lookback: int = 30,
                  pair_indices: np.ndarray | None = None,
-                 thresholds: np.ndarray | None = None):
+                 thresholds: np.ndarray | None = None,
+                 seed: int | None = None):
         self.symbols = symbols
         self.num_symbols = len(symbols)
         self.window = window
         self.lookback = lookback
+        self.seed = seed
+        # RNG for reproducible synthetic data
+        self.rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
 
         # Ring buffer state
         self.price_rb = np.zeros((self.num_symbols, self.window), dtype=np.float64)
@@ -132,7 +136,7 @@ class NanosecondHFTEngine:
         while time.time() - start_time < duration_seconds:
             batch_size = 50
             market_data = np.array([
-                [time.time_ns(), i % self.num_symbols, 100.0 + np.random.normal(0, 1)]
+                [time.time_ns(), i % self.num_symbols, 100.0 + self.rng.normal(0, 1)]
                 for i in range(batch_size)
             ])
             sig, corr, lat_ns = self.process_market_data(market_data)
@@ -174,6 +178,8 @@ def main():
     ap.add_argument('--pairs', type=str, help='Pairs as CSV like 0-1,1-2,2-3')
     ap.add_argument('--thresholds', type=str, help='Thresholds CSV like 2.0,2.0,2.0')
     ap.add_argument('--duration', type=int, default=3, help='Demo duration seconds')
+    ap.add_argument('--seed', type=int, help='Random seed for reproducible synthetic data')
+    ap.add_argument('--bench-runs', type=int, default=0, help='If >0, run N times and report median/p95')
     args = ap.parse_args()
 
     # Defaults
@@ -182,6 +188,7 @@ def main():
     lookback = args.lookback
     pair_indices = None
     thresholds = None
+    seed = args.seed
 
     # Config file overrides
     if args.config:
@@ -215,8 +222,41 @@ def main():
         if len(thresholds) != n_pairs:
             raise ValueError(f"thresholds length {len(thresholds)} must match n_pairs {n_pairs}")
 
+    # If benchmarking multiple runs, vary seed per run deterministically
+    if args.bench_runs and args.bench_runs > 0:
+        results = []
+        for r in range(args.bench_runs):
+            run_seed = (seed if seed is not None else 12345) + r
+            engine = NanosecondHFTEngine(symbols, window=window, lookback=lookback,
+                                         pair_indices=pair_indices, thresholds=thresholds,
+                                         seed=run_seed)
+            # Run once and capture average latency
+            start_time = time.time()
+            total_lat = 0
+            msgs = 0
+            while time.time() - start_time < args.duration:
+                batch_size = 50
+                market_data = np.array([
+                    [time.time_ns(), i % engine.num_symbols, 100.0 + engine.rng.normal(0, 1)]
+                    for i in range(batch_size)
+                ])
+                _, _, lat_ns = engine.process_market_data(market_data)
+                msgs += batch_size
+                total_lat += lat_ns
+            avg_ns = total_lat / max(msgs, 1)
+            results.append(avg_ns)
+        results = np.array(results, dtype=np.float64)
+        median_ns = float(np.percentile(results, 50))
+        p95_ns = float(np.percentile(results, 95))
+        print("\n🏁 Multi-run benchmark:")
+        print(f"   runs: {args.bench_runs}")
+        print(f"   median avg latency: {median_ns:,.0f} ns ({median_ns/1000:.2f} μs)")
+        print(f"   p95 avg latency:    {p95_ns:,.0f} ns ({p95_ns/1000:.2f} μs)")
+        return
+
     engine = NanosecondHFTEngine(symbols, window=window, lookback=lookback,
-                                 pair_indices=pair_indices, thresholds=thresholds)
+                                 pair_indices=pair_indices, thresholds=thresholds,
+                                 seed=seed)
     engine.run_demo(duration_seconds=args.duration)
 
 
