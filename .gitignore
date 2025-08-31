@@ -1,0 +1,24 @@
+# Compiled extensions
+*.so
+*.dll
+*.dylib
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build directories
+build/
+dist/
+*.egg-info/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
