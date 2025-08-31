@@ -1,0 +1,103 @@
+{
+  "optimization_config": {
+    "l1_ratio": 0.7,
+    "alpha": 0.02,
+    "kl_weight": 0.15,
+    "optimization_mode": "hybrid",
+    "total_pairs": 5,
+    "successful_pairs": 5
+  },
+  "portfolio_summary": {
+    "total_avg_pnl": 2941033.0507640885,
+    "profitable_pairs": 5,
+    "total_pairs": 5,
+    "profitability_rate": 1.0,
+    "avg_sharpe": 0.0,
+    "avg_win_rate": 0.44298374394484236,
+    "avg_elasticnet_penalty": 0.04208120036336466,
+    "avg_kl_penalty": 0.22370872473080183,
+    "optimization_mode": "hybrid"
+  },
+  "optimized_pairs": {
+    "CL-WFC": {
+      "best_params": {
+        "lookback": 26,
+        "z_entry": 1.8814694179477516,
+        "z_exit": 0.37533921948140847,
+        "position_size": 27978,
+        "transaction_cost": 0.0010277067871468507,
+        "profit_target": 2.8814694179477516,
+        "stop_loss": 1.0920583219768318
+      },
+      "avg_val_pnl": 105951.91656483979,
+      "avg_val_sharpe": 0.0,
+      "avg_val_win_rate": 0.4385964912280702,
+      "avg_elasticnet_penalty": 0.04039017402835691,
+      "avg_kl_penalty": 0.2899720943271316
+    },
+    "ABBV-ISRG": {
+      "best_params": {
+        "lookback": 26,
+        "z_entry": 1.8814694179713738,
+        "z_exit": 0.37533921946091287,
+        "position_size": 35703,
+        "transaction_cost": 0.0010342127556685421,
+        "profit_target": 2.881469417971374,
+        "stop_loss": 1.0920583219877316
+      },
+      "avg_val_pnl": 1094566.7247549093,
+      "avg_val_sharpe": 0.0,
+      "avg_val_win_rate": 0.4344751866490997,
+      "avg_elasticnet_penalty": 0.04380944697695747,
+      "avg_kl_penalty": 0.1752387103844848
+    },
+    "C-JPM": {
+      "best_params": {
+        "lookback": 21,
+        "z_entry": 1.5349989704844558,
+        "z_exit": 0.18844161199266163,
+        "position_size": 37256,
+        "transaction_cost": 0.000918057062593121,
+        "profit_target": 2.534998970514955,
+        "stop_loss": 0.9435709873635522
+      },
+      "avg_val_pnl": 626164.4003713377,
+      "avg_val_sharpe": 0.0,
+      "avg_val_win_rate": 0.41255411255411256,
+      "avg_elasticnet_penalty": 0.03547178508998055,
+      "avg_kl_penalty": 0.19360547439300466
+    },
+    "NVDA-TXN": {
+      "best_params": {
+        "lookback": 29,
+        "z_entry": 2.059757620959046,
+        "z_exit": 0.47179701685457864,
+        "position_size": 33444,
+        "transaction_cost": 0.0012921981323604018,
+        "profit_target": 3.059757620959046,
+        "stop_loss": 1.168467551839591
+      },
+      "avg_val_pnl": 706250.9781253341,
+      "avg_val_sharpe": 0.0,
+      "avg_val_win_rate": 0.5079365079365079,
+      "avg_elasticnet_penalty": 0.048353469029607625,
+      "avg_kl_penalty": 0.24714316900879504
+    },
+    "ORCL-BAC": {
+      "best_params": {
+        "lookback": 25,
+        "z_entry": 1.8316263166979838,
+        "z_exit": 0.3484097506483246,
+        "position_size": 35942,
+        "transaction_cost": 0.0009573870148173221,
+        "profit_target": 2.831626316697984,
+        "stop_loss": 1.0706969928705645
+      },
+      "avg_val_pnl": 408099.0309476678,
+      "avg_val_sharpe": 0.0,
+      "avg_val_win_rate": 0.4213564213564214,
+      "avg_elasticnet_penalty": 0.04238112669192073,
+      "avg_kl_penalty": 0.21258417554059297
+    }
+  }
+}

@@ -1,0 +1,1009 @@
+{
+  "metadata": {
+    "total_runtime": 11.898536920547485,
+    "total_calls": 24,
+    "unique_functions": 16,
+    "generated_at": "2025-08-31T22:00:12.204422",
+    "profiler_version": "1.0"
+  },
+  "timing_summary": [
+    {
+      "function": "[suite] data_operations_suite",
+      "call_count": 1,
+      "total_wall_time": 9.448754249999183,
+      "avg_wall_time": 9.448754249999183,
+      "median_wall_time": 9.448754249999183,
+      "max_wall_time": 9.448754249999183,
+      "min_wall_time": 9.448754249999183,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[api] get_data_call",
+      "call_count": 5,
+      "total_wall_time": 9.273588541997015,
+      "avg_wall_time": 1.8547177083994029,
+      "median_wall_time": 0.8877163339930121,
+      "max_wall_time": 5.309025458001997,
+      "min_wall_time": 0.6990066669968655,
+      "std_wall_time": 1.7495178990083071,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[data] data_download_GOOGL_META",
+      "call_count": 1,
+      "total_wall_time": 5.3094924579927465,
+      "avg_wall_time": 5.3094924579927465,
+      "median_wall_time": 5.3094924579927465,
+      "max_wall_time": 5.3094924579927465,
+      "min_wall_time": 5.3094924579927465,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[suite] optimization_suite",
+      "call_count": 1,
+      "total_wall_time": 2.44291416600754,
+      "avg_wall_time": 2.44291416600754,
+      "median_wall_time": 2.44291416600754,
+      "max_wall_time": 2.44291416600754,
+      "min_wall_time": 2.44291416600754,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[optimization] __main__.profile_optimization_algorithms",
+      "call_count": 1,
+      "total_wall_time": 2.439286958993762,
+      "avg_wall_time": 2.439286958993762,
+      "median_wall_time": 2.439286958993762,
+      "max_wall_time": 2.439286958993762,
+      "min_wall_time": 2.439286958993762,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0.35610300000000006,
+      "avg_cpu_time": 0.35610300000000006,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.145986514086435
+    },
+    {
+      "function": "[optimization] optimizer_differential_evolution",
+      "call_count": 1,
+      "total_wall_time": 2.2869722089963034,
+      "avg_wall_time": 2.2869722089963034,
+      "median_wall_time": 2.2869722089963034,
+      "max_wall_time": 2.2869722089963034,
+      "min_wall_time": 2.2869722089963034,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[data] data_download_AAPL_MSFT",
+      "call_count": 1,
+      "total_wall_time": 1.5169344580062898,
+      "avg_wall_time": 1.5169344580062898,
+      "median_wall_time": 1.5169344580062898,
+      "max_wall_time": 1.5169344580062898,
+      "min_wall_time": 1.5169344580062898,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[data] data_download_JPM_BAC",
+      "call_count": 1,
+      "total_wall_time": 0.8881251249986235,
+      "avg_wall_time": 0.8881251249986235,
+      "median_wall_time": 0.8881251249986235,
+      "max_wall_time": 0.8881251249986235,
+      "min_wall_time": 0.8881251249986235,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[data] data_download_JNJ_PFE",
+      "call_count": 1,
+      "total_wall_time": 0.861777666999842,
+      "avg_wall_time": 0.861777666999842,
+      "median_wall_time": 0.861777666999842,
+      "max_wall_time": 0.861777666999842,
+      "min_wall_time": 0.861777666999842,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[data] data_download_TSLA_NVDA",
+      "call_count": 1,
+      "total_wall_time": 0.6993943750130711,
+      "avg_wall_time": 0.6993943750130711,
+      "median_wall_time": 0.6993943750130711,
+      "max_wall_time": 0.6993943750130711,
+      "min_wall_time": 0.6993943750130711,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[optimization] optimizer_scipy_minimize",
+      "call_count": 1,
+      "total_wall_time": 0.0994601669954136,
+      "avg_wall_time": 0.0994601669954136,
+      "median_wall_time": 0.0994601669954136,
+      "max_wall_time": 0.0994601669954136,
+      "min_wall_time": 0.0994601669954136,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[suite] backtesting_suite",
+      "call_count": 1,
+      "total_wall_time": 0.0027094580000266433,
+      "avg_wall_time": 0.0027094580000266433,
+      "median_wall_time": 0.0027094580000266433,
+      "max_wall_time": 0.0027094580000266433,
+      "min_wall_time": 0.0027094580000266433,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 0.0,
+      "failures": 1,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[backtest] __main__.profile_backtesting",
+      "call_count": 1,
+      "total_wall_time": 0.0024958750000223517,
+      "avg_wall_time": 0.0024958750000223517,
+      "median_wall_time": 0.0024958750000223517,
+      "max_wall_time": 0.0024958750000223517,
+      "min_wall_time": 0.0024958750000223517,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0.0024720000000000297,
+      "avg_cpu_time": 0.0024720000000000297,
+      "success_rate": 0.0,
+      "failures": 1,
+      "cpu_efficiency": 0.9904342164482964
+    },
+    {
+      "function": "[computation] data_processing",
+      "call_count": 5,
+      "total_wall_time": 0.0019812079990515485,
+      "avg_wall_time": 0.0003962415998103097,
+      "median_wall_time": 0.00037816599069628865,
+      "max_wall_time": 0.0005099169939057902,
+      "min_wall_time": 0.0003152919962303713,
+      "std_wall_time": 6.771271223614523e-05,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 1.0,
+      "failures": 0,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[backtest] backtest_config_0",
+      "call_count": 1,
+      "total_wall_time": 0.0002705000079004094,
+      "avg_wall_time": 0.0002705000079004094,
+      "median_wall_time": 0.0002705000079004094,
+      "max_wall_time": 0.0002705000079004094,
+      "min_wall_time": 0.0002705000079004094,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 0.0,
+      "failures": 1,
+      "cpu_efficiency": 0.0
+    },
+    {
+      "function": "[computation] spread_calculation",
+      "call_count": 1,
+      "total_wall_time": 0.00022620800882577896,
+      "avg_wall_time": 0.00022620800882577896,
+      "median_wall_time": 0.00022620800882577896,
+      "max_wall_time": 0.00022620800882577896,
+      "min_wall_time": 0.00022620800882577896,
+      "std_wall_time": 0.0,
+      "total_cpu_time": 0,
+      "avg_cpu_time": 0.0,
+      "success_rate": 0.0,
+      "failures": 1,
+      "cpu_efficiency": 0.0
+    }
+  ],
+  "bottlenecks": [
+    {
+      "function": "[api] get_data_call",
+      "avg_time": 1.8547177083994029,
+      "call_count": 5,
+      "total_time": 9.273588541997015,
+      "impact_score": 9.273588541997015
+    }
+  ],
+  "call_counts": {
+    "[suite] data_operations_suite": 1,
+    "[data] data_download_AAPL_MSFT": 1,
+    "[api] get_data_call": 5,
+    "[computation] data_processing": 5,
+    "[data] data_download_GOOGL_META": 1,
+    "[data] data_download_TSLA_NVDA": 1,
+    "[data] data_download_JPM_BAC": 1,
+    "[data] data_download_JNJ_PFE": 1,
+    "[suite] optimization_suite": 1,
+    "[optimization] __main__.profile_optimization_algorithms": 1,
+    "[optimization] optimizer_scipy_minimize": 1,
+    "[optimization] optimizer_differential_evolution": 1,
+    "[suite] backtesting_suite": 1,
+    "[backtest] __main__.profile_backtesting": 1,
+    "[backtest] backtest_config_0": 1,
+    "[computation] spread_calculation": 1
+  },
+  "resource_history": [
+    {
+      "timestamp": 1756657800.306123,
+      "cpu_percent": 0.0,
+      "memory_rss": 158859264,
+      "memory_vms": 421552898048,
+      "memory_percent": 0.616455078125,
+      "threads": 12
+    },
+    {
+      "timestamp": 1756657800.417995,
+      "cpu_percent": 73.0,
+      "memory_rss": 169934848,
+      "memory_vms": 421609127936,
+      "memory_percent": 0.6594340006510417,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657800.5231192,
+      "cpu_percent": 54.7,
+      "memory_rss": 180961280,
+      "memory_vms": 421634015232,
+      "memory_percent": 0.702222188313802,
+      "threads": 16
+    },
+    {
+      "timestamp": 1756657800.6282492,
+      "cpu_percent": 0.8,
+      "memory_rss": 180944896,
+      "memory_vms": 421633441792,
+      "memory_percent": 0.7021586100260417,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657800.731879,
+      "cpu_percent": 8.7,
+      "memory_rss": 183468032,
+      "memory_vms": 421634490368,
+      "memory_percent": 0.7119496663411458,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657800.8371341,
+      "cpu_percent": 0.8,
+      "memory_rss": 183615488,
+      "memory_vms": 421643927552,
+      "memory_percent": 0.7125218709309895,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657800.940317,
+      "cpu_percent": 0.4,
+      "memory_rss": 183615488,
+      "memory_vms": 421643927552,
+      "memory_percent": 0.7125218709309895,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.042948,
+      "cpu_percent": 6.5,
+      "memory_rss": 184270848,
+      "memory_vms": 421662801920,
+      "memory_percent": 0.7150650024414062,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.148169,
+      "cpu_percent": 0.3,
+      "memory_rss": 184270848,
+      "memory_vms": 421662801920,
+      "memory_percent": 0.7150650024414062,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.252971,
+      "cpu_percent": 2.2,
+      "memory_rss": 184516608,
+      "memory_vms": 421662801920,
+      "memory_percent": 0.7160186767578125,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.35686,
+      "cpu_percent": 0.6,
+      "memory_rss": 184549376,
+      "memory_vms": 421662801920,
+      "memory_percent": 0.7161458333333333,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.460714,
+      "cpu_percent": 11.8,
+      "memory_rss": 186187776,
+      "memory_vms": 421932285952,
+      "memory_percent": 0.722503662109375,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.5640519,
+      "cpu_percent": 30.2,
+      "memory_rss": 188891136,
+      "memory_vms": 421932253184,
+      "memory_percent": 0.7329940795898438,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.6692832,
+      "cpu_percent": 1.6,
+      "memory_rss": 188923904,
+      "memory_vms": 421932253184,
+      "memory_percent": 0.7331212361653645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.7735229,
+      "cpu_percent": 0.4,
+      "memory_rss": 188923904,
+      "memory_vms": 421932253184,
+      "memory_percent": 0.7331212361653645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.8787851,
+      "cpu_percent": 1.6,
+      "memory_rss": 189120512,
+      "memory_vms": 422075908096,
+      "memory_percent": 0.7338841756184895,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657801.9820101,
+      "cpu_percent": 41.2,
+      "memory_rss": 190660608,
+      "memory_vms": 422093783040,
+      "memory_percent": 0.7398605346679688,
+      "threads": 16
+    },
+    {
+      "timestamp": 1756657802.083971,
+      "cpu_percent": 20.7,
+      "memory_rss": 191922176,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7447560628255208,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.189196,
+      "cpu_percent": 0.5,
+      "memory_rss": 191938560,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7448196411132812,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.290972,
+      "cpu_percent": 0.7,
+      "memory_rss": 191971328,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.744946797688802,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.396215,
+      "cpu_percent": 0.7,
+      "memory_rss": 191971328,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.744946797688802,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.4996421,
+      "cpu_percent": 0.7,
+      "memory_rss": 191971328,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.744946797688802,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.604909,
+      "cpu_percent": 1.1,
+      "memory_rss": 191971328,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.744946797688802,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.706458,
+      "cpu_percent": 0.9,
+      "memory_rss": 191987712,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7450103759765625,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.8068721,
+      "cpu_percent": 0.8,
+      "memory_rss": 191987712,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7450103759765625,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657802.912082,
+      "cpu_percent": 0.8,
+      "memory_rss": 191987712,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7450103759765625,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.017078,
+      "cpu_percent": 30.0,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.12232,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.227087,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.32998,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.4351301,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.540255,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.645376,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.7504919,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.850664,
+      "cpu_percent": 0.1,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657803.955771,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.057604,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.162708,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.267821,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.372929,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.478121,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.583389,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.684639,
+      "cpu_percent": 0.4,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.787807,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.8908532,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657804.995065,
+      "cpu_percent": 0.4,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657805.0973198,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657805.202494,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657805.3031812,
+      "cpu_percent": 0.2,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657805.4083998,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657805.5136151,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657805.618834,
+      "cpu_percent": 0.3,
+      "memory_rss": 192856064,
+      "memory_vms": 422078005248,
+      "memory_percent": 0.7483800252278645,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657805.724106,
+      "cpu_percent": 0.4,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657805.8282292,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657805.93342,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.037738,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.1403131,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.2455602,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.347758,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.4530282,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.5534909,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.6587038,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.763882,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.8657842,
+      "cpu_percent": 0.3,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657806.9686432,
+      "cpu_percent": 0.4,
+      "memory_rss": 192839680,
+      "memory_vms": 422077431808,
+      "memory_percent": 0.7483164469401042,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.072844,
+      "cpu_percent": 7.2,
+      "memory_rss": 194084864,
+      "memory_vms": 422086868992,
+      "memory_percent": 0.7531483968098958,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.1780639,
+      "cpu_percent": 1.3,
+      "memory_rss": 194134016,
+      "memory_vms": 422086868992,
+      "memory_percent": 0.753339131673177,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.2843368,
+      "cpu_percent": 52.1,
+      "memory_rss": 195837952,
+      "memory_vms": 422515785728,
+      "memory_percent": 0.7599512736002605,
+      "threads": 15
+    },
+    {
+      "timestamp": 1756657807.3894882,
+      "cpu_percent": 20.2,
+      "memory_rss": 196853760,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7638931274414062,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.491476,
+      "cpu_percent": 1.4,
+      "memory_rss": 196886528,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.764020284016927,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.599919,
+      "cpu_percent": 24.5,
+      "memory_rss": 197672960,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.767072041829427,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.70189,
+      "cpu_percent": 20.3,
+      "memory_rss": 198885376,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.771776835123698,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.807146,
+      "cpu_percent": 0.7,
+      "memory_rss": 198885376,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.771776835123698,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657807.917886,
+      "cpu_percent": 2.1,
+      "memory_rss": 198885376,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.771776835123698,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.0230012,
+      "cpu_percent": 64.2,
+      "memory_rss": 199327744,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7734934488932292,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.1237912,
+      "cpu_percent": 8.2,
+      "memory_rss": 200245248,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7770538330078125,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.227967,
+      "cpu_percent": 0.6,
+      "memory_rss": 200245248,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7770538330078125,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.332913,
+      "cpu_percent": 1.1,
+      "memory_rss": 200245248,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7770538330078125,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.4389088,
+      "cpu_percent": 28.2,
+      "memory_rss": 200654848,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.778643290201823,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.5393732,
+      "cpu_percent": 23.2,
+      "memory_rss": 201523200,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.782012939453125,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.640213,
+      "cpu_percent": 2.8,
+      "memory_rss": 201670656,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7825851440429688,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.741309,
+      "cpu_percent": 0.5,
+      "memory_rss": 201670656,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7825851440429688,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657808.8480582,
+      "cpu_percent": 34.4,
+      "memory_rss": 201883648,
+      "memory_vms": 422482100224,
+      "memory_percent": 0.7834116617838541,
+      "threads": 13
+    },
+    {
+      "timestamp": 1756657808.952967,
+      "cpu_percent": 43.9,
+      "memory_rss": 203341824,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7890701293945312,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657809.0581539,
+      "cpu_percent": 1.7,
+      "memory_rss": 203390976,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7892608642578125,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657809.163344,
+      "cpu_percent": 0.4,
+      "memory_rss": 203390976,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7892608642578125,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657809.265093,
+      "cpu_percent": 28.3,
+      "memory_rss": 203571200,
+      "memory_vms": 422482100224,
+      "memory_percent": 0.7899602254231771,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657809.370323,
+      "cpu_percent": 14.8,
+      "memory_rss": 204505088,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7935841878255209,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657809.475582,
+      "cpu_percent": 0.7,
+      "memory_rss": 204505088,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7935841878255209,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657809.580841,
+      "cpu_percent": 0.4,
+      "memory_rss": 204505088,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7935841878255209,
+      "threads": 14
+    },
+    {
+      "timestamp": 1756657809.692467,
+      "cpu_percent": 9.1,
+      "memory_rss": 204767232,
+      "memory_vms": 422498959360,
+      "memory_percent": 0.7946014404296875,
+      "threads": 14
+    }
+  ],
+  "call_graph": {}
+}
