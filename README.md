@@ -9,14 +9,25 @@ Production-ready high-frequency trading engine optimized for Apple M4 Silicon.
 
 ## Quick Start
 
-### Build
+### Install (editable) and build native extensions
 ```bash
-python setup.py build_ext --inplace
+python -m pip install -e .
 ```
 
-### Run
+### Run the HFT Engine (daily bars example)
 ```bash
-python run.py
+python hft_engine/engine.py --tickers AAPL MSFT --start 2024-01-01 --end 2024-12-31 --interval 1d --batch 256
+```
+
+### Run the HFT Engine (1-minute bars with automatic chunked download)
+```bash
+python hft_engine/engine.py --tickers KO PEP KDP MNST PG CL KMB MDLZ XLP --start 2025-08-18 --end 2025-08-29 --interval 1m --batch 512
+```
+
+### Optimize C++ strategies with Optuna (optional)
+```bash
+python -m pip install optuna
+python hft_engine/optimize_hft_strategies.py --tickers KO PEP KDP MNST PG CL KMB MDLZ XLP --start 2025-08-18 --end 2025-08-29 --interval 1m --trials 50
 ```
 
 ## Architecture

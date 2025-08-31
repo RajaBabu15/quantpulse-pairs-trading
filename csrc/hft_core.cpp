@@ -122,6 +122,188 @@ struct RunStats {
     double wall_clock_duration_s;
 };
 
+// Real-data HFTEngine class (processes external price/symbol-id batches)
+struct HFTEngine {
+    int num_symbols;
+    int window;
+    uint32_t window_mask;
+    int lookback;
+
+    std::vector<double> price_rb;
+    std::vector<int32_t> write_idx;
+
+    std::vector<int32_t> pairs;
+    int n_pairs;
+
+    std::vector<double> zsum;
+    std::vector<double> zsq;
+    bool zs_initialized;
+
+    // stats
+    uint64_t total_messages;
+    double avg_latency_ns;
+    double throughput_msg_sec;
+    double wall_clock_avg_latency_ns;
+    double wall_clock_duration_s;
+
+    HFTEngine(int num_symbols_, int window_, int lookback_, uint64_t /*seed*/)
+        : num_symbols(num_symbols_), window(window_), window_mask((uint32_t)(window_ - 1)), lookback(lookback_),
+          price_rb((size_t)num_symbols_ * window_, 0.0), write_idx((size_t)num_symbols_, 0),
+          n_pairs(0), zs_initialized(false), total_messages(0), avg_latency_ns(0.0), throughput_msg_sec(0.0),
+          wall_clock_avg_latency_ns(0.0), wall_clock_duration_s(0.0) {}
+
+    void set_pairs(pybind11::array_t<int32_t> pair_indices) {
+        auto buf = pair_indices.request();
+        int64_t size = buf.size;
+        auto* data = static_cast<int32_t*>(buf.ptr);
+        pairs.assign(data, data + size);
+        n_pairs = (int)(pairs.size() / 2);
+        zsum.assign((size_t)n_pairs, 0.0);
+        zsq.assign((size_t)n_pairs, 0.0);
+        zs_initialized = false;
+    }
+
+    // Fill zsum/zsumsq into provided arrays
+    void fill_zstats(pybind11::array_t<double> zsum_out, pybind11::array_t<double> zsumsq_out) {
+        auto zsum_buf = zsum_out.request();
+        auto zsq_buf = zsumsq_out.request();
+        if ((int)zsum_buf.size != n_pairs || (int)zsq_buf.size != n_pairs) {
+            throw std::runtime_error("Output zstat sizes must equal n_pairs");
+        }
+        auto* zsum_ptr = static_cast<double*>(zsum_buf.ptr);
+        auto* zsq_ptr = static_cast<double*>(zsq_buf.ptr);
+        std::memcpy(zsum_ptr, zsum.data(), sizeof(double) * (size_t)n_pairs);
+        std::memcpy(zsq_ptr, zsq.data(), sizeof(double) * (size_t)n_pairs);
+    }
+
+    // Process a batch of prices/symbol_ids from Python
+    pybind11::dict process_batch(pybind11::array_t<double> prices, pybind11::array_t<int32_t> sids) {
+        auto t0 = now_ns();
+
+        auto p_buf = prices.request();
+        auto s_buf = sids.request();
+        if (p_buf.size != s_buf.size) throw std::runtime_error("prices and sids must be same length");
+        int B = (int)p_buf.size;
+        auto* p_ptr = static_cast<double*>(p_buf.ptr);
+        auto* s_ptr = static_cast<int32_t*>(s_buf.ptr);
+
+        // aggregate last update per symbol in this batch
+        // reuse a small touched list to avoid clearing O(num_symbols) each batch
+        std::vector<int32_t> touched; touched.reserve((size_t)B);
+        std::vector<char> seen((size_t)num_symbols, 0);
+        for (int i = 0; i < B; ++i) {
+            int32_t sid = s_ptr[i];
+            if ((uint32_t)sid >= (uint32_t)num_symbols) continue;
+            if (!seen[(size_t)sid]) { touched.push_back(sid); seen[(size_t)sid] = 1; }
+            // store last seen price in write buffer slot; we'll actually commit below
+            // temporarily use price_rb to stage value (we will overwrite ring location below)
+            // but better to store in a small map; here we directly commit incrementally
+        }
+        // flush to ring buffer: set last price for each touched
+        for (int32_t sid : touched) {
+            uint32_t idx = (uint32_t)write_idx[(size_t)sid];
+            // find last occurrence price for sid by scanning backwards (cheap if few per sid)
+            double lastp = 0.0; bool found=false;
+            for (int i = B - 1; i >= 0; --i) {
+                if (s_ptr[i] == sid) { lastp = p_ptr[i]; found = true; break; }
+            }
+            if (!found) continue;
+            price_rb[(size_t)sid * window + idx] = lastp;
+            write_idx[(size_t)sid] = (int32_t)((idx + 1) & window_mask);
+        }
+
+        // z-stats computation
+        if (n_pairs > 0) {
+            if (!zs_initialized) {
+                for (int p = 0; p < n_pairs; ++p) {
+                    int32_t idx1 = pairs[2 * p];
+                    int32_t idx2 = pairs[2 * p + 1];
+                    if ((uint32_t)idx1 >= (uint32_t)num_symbols || (uint32_t)idx2 >= (uint32_t)num_symbols) continue;
+                    int32_t w1 = write_idx[(size_t)idx1];
+                    int32_t w2 = write_idx[(size_t)idx2];
+                    double s=0.0, ss=0.0;
+                    for (int k = 0; k < lookback; ++k) {
+                        int32_t j1 = (w1 - lookback + k + window) & window_mask;
+                        int32_t j2 = (w2 - lookback + k + window) & window_mask;
+                        double spread = price_rb[(size_t)idx1 * window + j1] - price_rb[(size_t)idx2 * window + j2];
+                        s += spread; ss += spread * spread;
+                    }
+                    zsum[(size_t)p] = s; zsq[(size_t)p] = ss;
+                }
+                zs_initialized = true;
+            } else {
+                for (int p = 0; p < n_pairs; ++p) {
+                    int32_t idx1 = pairs[2 * p];
+                    int32_t idx2 = pairs[2 * p + 1];
+                    int32_t w1 = write_idx[(size_t)idx1];
+                    int32_t w2 = write_idx[(size_t)idx2];
+                    int32_t new1 = (w1 - 1 + window) & window_mask;
+                    int32_t new2 = (w2 - 1 + window) & window_mask;
+                    int32_t old1 = (w1 - lookback + window) & window_mask;
+                    int32_t old2 = (w2 - lookback + window) & window_mask;
+                    double s_new = price_rb[(size_t)idx1 * window + new1] - price_rb[(size_t)idx2 * window + new2];
+                    double s_old = price_rb[(size_t)idx1 * window + old1] - price_rb[(size_t)idx2 * window + old2];
+                    zsum[(size_t)p] += (s_new - s_old);
+                    zsq[(size_t)p] += (s_new * s_new - s_old * s_old);
+                }
+            }
+        }
+
+        auto t1 = now_ns();
+        uint64_t batch_ns = (uint64_t)(t1 - t0);
+        double prev_total = (double)total_messages;
+        total_messages += (uint64_t)B;
+        if (prev_total == 0.0) avg_latency_ns = (double)batch_ns;
+        else avg_latency_ns = (avg_latency_ns * prev_total + (double)batch_ns) / (double)total_messages;
+
+        pybind11::dict d;
+        d["total_messages"] = total_messages;
+        d["avg_latency_ns"] = avg_latency_ns;
+        d["throughput_msg_sec"] = throughput_msg_sec; // filled by orchestrator if desired
+        d["wall_clock_avg_latency_ns"] = wall_clock_avg_latency_ns;
+        d["wall_clock_duration_s"] = wall_clock_duration_s;
+        return d;
+    }
+
+    pybind11::dict get_stats() const {
+        pybind11::dict d;
+        d["total_messages"] = total_messages;
+        d["avg_latency_ns"] = avg_latency_ns;
+        d["throughput_msg_sec"] = throughput_msg_sec;
+        d["wall_clock_avg_latency_ns"] = wall_clock_avg_latency_ns;
+        d["wall_clock_duration_s"] = wall_clock_duration_s;
+        return d;
+    }
+
+    // Expose internal buffers as NumPy arrays (read-only views)
+    pybind11::array price_rb_view() {
+        namespace py = pybind11;
+        py::ssize_t shape[1] = { static_cast<py::ssize_t>(num_symbols * window) };
+        py::ssize_t strides[1] = { static_cast<py::ssize_t>(sizeof(double)) };
+        return py::array(py::buffer_info(
+            price_rb.data(),                // ptr
+            sizeof(double),                 // itemsize
+            py::format_descriptor<double>::format(), // format
+            1,                              // ndim
+            { shape[0] },                   // shape
+            { strides[0] }                  // strides
+        ));
+    }
+    pybind11::array write_idx_view() {
+        namespace py = pybind11;
+        py::ssize_t shape[1] = { static_cast<py::ssize_t>(num_symbols) };
+        py::ssize_t strides[1] = { static_cast<py::ssize_t>(sizeof(int32_t)) };
+        return py::array(py::buffer_info(
+            write_idx.data(),
+            sizeof(int32_t),
+            py::format_descriptor<int32_t>::format(),
+            1,
+            { shape[0] },
+            { strides[0] }
+        ));
+    }
+};
+
 // Production main loop - minimal overhead
 RunStats run_loop(
     double duration_seconds,
@@ -252,6 +434,17 @@ PYBIND11_MODULE(hft_core, m) {
         .def_readonly("wall_clock_avg_latency_ns", &RunStats::wall_clock_avg_latency_ns)
         .def_readonly("wall_clock_duration_s", &RunStats::wall_clock_duration_s);
     
+    // Expose real-data HFTEngine class
+    pybind11::class_<HFTEngine>(m, "HFTEngine")
+        .def(pybind11::init<int,int,int,uint64_t>(),
+             pybind11::arg("num_symbols"), pybind11::arg("window"), pybind11::arg("lookback"), pybind11::arg("seed") = 0x12345678abcdefULL)
+        .def("set_pairs", &HFTEngine::set_pairs)
+        .def("process_batch", &HFTEngine::process_batch)
+        .def("fill_zstats", &HFTEngine::fill_zstats)
+        .def("get_stats", &HFTEngine::get_stats)
+        .def_property_readonly("price_rb", &HFTEngine::price_rb_view)
+        .def_property_readonly("write_idx", &HFTEngine::write_idx_view);
+
     m.def("run_loop", &run_loop, 
           "Production main loop",
           pybind11::arg("duration_seconds"),
