@@ -24,7 +24,7 @@ import platform
 warnings.filterwarnings('ignore')
 
 # ============================================================================
-# C++ HFT MODULE IMPORTS (with organized structure)
+# C++ HFT MODULE IMPORTS (with organized structure) + NATIVE ACCELERATION
 # ============================================================================
 
 try:
@@ -45,12 +45,29 @@ try:
     HFT_AVAILABLE = True
     print("✓ C++ HFT modules loaded successfully")
 except ImportError as e:
-    print(f"⚠ C++ modules not available: {e}")
+    print(f"⚠ C++ HFT modules not available: {e}")
     print("⚠ Running in pure Python mode")
     HFT_AVAILABLE = False
     hft_core = None
     hft_strategies = None
     hft_core_accelerated = None
+
+# Try to import enhanced native acceleration
+try:
+    from quantpulse_native import (
+        get_native_instance, 
+        is_native_available,
+        calculate_spread_and_zscore,
+        vectorized_backtest,
+        parallel_cross_validation
+    )
+    NATIVE_ACCELERATION = True
+    native_instance = get_native_instance()
+    print(f"✓ Enhanced Native Acceleration: {'Available' if native_instance.is_available else 'Fallback Mode'}")
+except ImportError:
+    NATIVE_ACCELERATION = False
+    native_instance = None
+    print("⚠ Enhanced native acceleration not available")
 
 # ============================================================================
 # PROFITABLE CONFIGURATIONS
@@ -392,17 +409,24 @@ class PairsTrader:
     
     def save_results(self, filename_prefix='backtest'):
         """Save trading results"""
+        # Ensure directories exist
+        import os
+        os.makedirs('data', exist_ok=True)
+        os.makedirs('static', exist_ok=True)
+        
         # Save trades
         if self.trades:
             trades_df = pd.DataFrame(self.trades)
-            trades_df.to_csv(f'{filename_prefix}_trades.csv', index=False)
-            print(f"Saved trades to {filename_prefix}_trades.csv")
+            trades_file = f'data/{filename_prefix}_trades.csv'
+            trades_df.to_csv(trades_file, index=False)
+            print(f"Saved trades to {trades_file}")
         
         # Save equity curve
         if self.equity_curve:
             equity_df = pd.DataFrame(self.equity_curve)
-            equity_df.to_csv(f'{filename_prefix}_equity.csv', index=False)
-            print(f"Saved equity curve to {filename_prefix}_equity.csv")
+            equity_file = f'data/{filename_prefix}_equity.csv'
+            equity_df.to_csv(equity_file, index=False)
+            print(f"Saved equity curve to {equity_file}")
             
             # Plot if matplotlib available
             try:
@@ -441,8 +465,9 @@ class PairsTrader:
                 ax2.grid(True)
                 
                 plt.tight_layout()
-                plt.savefig(f'{filename_prefix}_analysis.png', dpi=300, bbox_inches='tight')
-                print(f"Saved chart to {filename_prefix}_analysis.png")
+                chart_file = f'static/{filename_prefix}_analysis.png'
+                plt.savefig(chart_file, dpi=300, bbox_inches='tight')
+                print(f"Saved chart to {chart_file}")
                 
             except ImportError:
                 print("matplotlib not available, skipping chart")

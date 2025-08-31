@@ -10,7 +10,14 @@
 #include <unordered_map>
 #include <cmath>
 #include <algorithm>
-#include <immintrin.h>  // For SIMD/AVX
+// Platform-specific SIMD includes
+#if defined(__x86_64__) || defined(_M_X64)
+    #include <immintrin.h>  // AVX/AVX2 intrinsics for x86_64
+    #define HAVE_X86_SIMD
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    #include <arm_neon.h>   // NEON intrinsics for ARM64
+    #define HAVE_ARM_NEON
+#endif
 #include <omp.h>        // For OpenMP
 
 // Common data structures
@@ -89,7 +96,24 @@ public:
     size_t size() const { return current_size.load(); }
 };
 
+// C linkage for external functions
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // SIMD-optimized mathematical operations
+void simd_vector_subtract(const double* a, const double* b, double* result, size_t n);
+void simd_vector_multiply(const double* a, const double* b, double* result, size_t n);
+void simd_vector_add(const double* a, const double* b, double* result, size_t n);
+double simd_vector_sum(const double* arr, size_t n);
+double simd_vector_mean(const double* arr, size_t n);
+double simd_vector_std(const double* arr, size_t n, double mean);
+
+#ifdef __cplusplus
+}
+#endif
+
+// C++ namespace functions (for internal use)
 namespace simd {
     void vectorized_subtract(const double* a, const double* b, double* result, size_t n);
     void vectorized_multiply(const double* a, const double* b, double* result, size_t n);
