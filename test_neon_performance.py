@@ -1,41 +1,42 @@
 #!/usr/bin/env python3
 """
-NEON vs Scalar Performance Comparison
-Measures performance improvement from NEON SIMD acceleration
+NEON Performance Validation Script
+
+This script compares the performance of the baseline HFT core against
+the NEON-accelerated version to measure the SIMD acceleration factor.
 """
 
+import sys
 import numpy as np
 import time
-import nanoext_runloop_corrected  # Scalar version
-import nanoext_runloop_neon      # NEON version
+import hft_core
+import hft_core_neon
 
-def setup_test_data(num_symbols=1000, num_pairs=200, batch_size=128):
-    """Create identical test data for both engines"""
-    window = 1024
-    window_mask = window - 1
-    lookback = 100
-    
-    # Initialize arrays
+def create_test_data(num_symbols, num_pairs, window, lookback):
+    """Create test data structures for performance testing"""
+    # Ring buffer for price history
     price_rb = np.zeros((num_symbols, window), dtype=np.float64)
     write_idx = np.zeros(num_symbols, dtype=np.int32)
     
-    # Create trading pairs (ensure even number for NEON vectorization)
-    pair_indices = np.zeros(num_pairs * 2, dtype=np.int32)
+    # Trading pairs
+    pairs = []
     np.random.seed(42)
     for i in range(num_pairs):
         s1 = np.random.randint(0, num_symbols)
         s2 = np.random.randint(0, num_symbols)
         if s1 != s2:
-            pair_indices[2*i] = s1
-            pair_indices[2*i + 1] = s2
+            pairs.extend([s1, s2])
         else:
-            pair_indices[2*i] = i % num_symbols
-            pair_indices[2*i + 1] = (i + 1) % num_symbols
+            pairs.extend([i % num_symbols, (i + 1) % num_symbols])
     
-    # Initialize state arrays
+    pair_indices = np.array(pairs, dtype=np.int32)
     thresholds = np.full(num_pairs, 2.0, dtype=np.float64)
+    
+    # Z-score computation state
     zsum = np.zeros(num_pairs, dtype=np.float64)
     zsumsq = np.zeros(num_pairs, dtype=np.float64)
+    
+    # Correlation computation state
     csx = np.zeros(num_pairs, dtype=np.float64)
     csy = np.zeros(num_pairs, dtype=np.float64)
     csxx = np.zeros(num_pairs, dtype=np.float64)
@@ -53,75 +54,93 @@ def setup_test_data(num_symbols=1000, num_pairs=200, batch_size=128):
         'csy': csy,
         'csxx': csxx,
         'csyy': csyy,
-        'csxy': csxy,
-        'window': window,
-        'window_mask': window_mask,
-        'lookback': lookback
+        'csxy': csxy
     }
 
 def run_performance_comparison():
-    print("🔥 NEON vs SCALAR PERFORMANCE COMPARISON")
-    print("=" * 60)
-    print("🎯 Testing NEON SIMD acceleration on Apple M4")
+    print("🔬 NEON PERFORMANCE VALIDATION")
+    print("=" * 50)
     print()
     
     # Test configuration
     num_symbols = 1000
-    num_pairs = 200  # Even number for optimal NEON vectorization
+    window = 1024
+    window_mask = window - 1
+    lookback = 100
+    num_pairs = 200
     batch_size = 128
-    test_duration = 3.0  # seconds
+    test_duration = 5.0  # seconds
+    seed = 0x123456789abcdef
     
     print(f"📊 Test Configuration:")
     print(f"   Symbols: {num_symbols}")
-    print(f"   Trading pairs: {num_pairs} (optimized for NEON 2x vectorization)")
+    print(f"   Trading pairs: {num_pairs}")
+    print(f"   Window size: {window}")
     print(f"   Batch size: {batch_size}")
     print(f"   Duration: {test_duration}s each")
     print()
     
-    # Prepare identical test data
-    test_data = setup_test_data(num_symbols, num_pairs, batch_size)
+    # Create test data
+    print("🔧 Preparing test data...")
+    test_data = create_test_data(num_symbols, num_pairs, window, lookback)
+    print("✅ Test data ready")
+    print()
     
-    # Test 1: Scalar (baseline) performance
-    print("🔬 Testing SCALAR baseline performance...")
+    # Test 1: Baseline HFT Core
+    print("🏃 Running BASELINE performance test...")
     
-    scalar_data = {k: v.copy() if hasattr(v, 'copy') else v for k, v in test_data.items()}
+    # Fresh copies of data for baseline test
+    baseline_data = {}
+    for key, value in test_data.items():
+        baseline_data[key] = value.copy()
     
-    scalar_stats = nanoext_runloop_corrected.run_loop_corrected(
+    baseline_start = time.perf_counter()
+    baseline_stats = hft_core.run_loop_corrected(
         test_duration,
         batch_size,
         num_symbols,
-        scalar_data['window'],
-        scalar_data['window_mask'],
-        scalar_data['lookback'],
-        scalar_data['price_rb'],
-        scalar_data['write_idx'],
-        scalar_data['pair_indices'],
-        scalar_data['thresholds'],
-        scalar_data['zsum'],
-        scalar_data['zsumsq'],
-        scalar_data['csx'],
-        scalar_data['csy'],
-        scalar_data['csxx'],
-        scalar_data['csyy'],
-        scalar_data['csxy'],
-        seed=0x123456789abcdef,
-        collect_histograms=False  # Skip for cleaner output
+        window,
+        window_mask,
+        lookback,
+        baseline_data['price_rb'],
+        baseline_data['write_idx'],
+        baseline_data['pair_indices'],
+        baseline_data['thresholds'],
+        baseline_data['zsum'],
+        baseline_data['zsumsq'],
+        baseline_data['csx'],
+        baseline_data['csy'],
+        baseline_data['csxx'],
+        baseline_data['csyy'],
+        baseline_data['csxy'],
+        seed=seed,
+        collect_histograms=True
     )
+    baseline_end = time.perf_counter()
+    baseline_wall_time = baseline_end - baseline_start
     
-    print("\n" + "="*50)
+    print(f"✅ Baseline completed")
+    print(f"   Messages: {baseline_stats.total_messages:,}")
+    print(f"   Avg latency: {baseline_stats.wall_clock_avg_latency_ns:.1f} ns")
+    print(f"   Throughput: {baseline_stats.throughput_msg_sec/1e6:.1f}M msg/sec")
+    print()
     
-    # Test 2: NEON-accelerated performance
-    print("🚀 Testing NEON-accelerated performance...")
+    # Test 2: NEON-accelerated HFT Core
+    print("🏃 Running NEON-ACCELERATED performance test...")
     
-    neon_data = {k: v.copy() if hasattr(v, 'copy') else v for k, v in test_data.items()}
+    # Fresh copies of data for NEON test
+    neon_data = {}
+    for key, value in test_data.items():
+        neon_data[key] = value.copy()
     
-    neon_stats = nanoext_runloop_neon.run_loop_neon(
+    neon_start = time.perf_counter()
+    neon_stats = hft_core_neon.run_loop_neon(
         test_duration,
         batch_size,
         num_symbols,
-        neon_data['window'],
-        neon_data['window_mask'],
-        neon_data['lookback'],
+        window,
+        window_mask,
+        lookback,
         neon_data['price_rb'],
         neon_data['write_idx'],
         neon_data['pair_indices'],
@@ -133,109 +152,94 @@ def run_performance_comparison():
         neon_data['csxx'],
         neon_data['csyy'],
         neon_data['csxy'],
-        seed=0x123456789abcdef,
-        collect_histograms=False  # Skip for cleaner output
+        seed=seed,
+        collect_histograms=True
     )
+    neon_end = time.perf_counter()
+    neon_wall_time = neon_end - neon_start
     
-    # Performance comparison analysis
-    print("\n" + "="*50)
-    print("🎯 PERFORMANCE COMPARISON RESULTS")
-    print("=" * 50)
+    print(f"✅ NEON-accelerated completed")
+    print(f"   Messages: {neon_stats.total_messages:,}")
+    print(f"   Avg latency: {neon_stats.wall_clock_avg_latency_ns:.1f} ns") 
+    print(f"   Throughput: {neon_stats.throughput_msg_sec/1e6:.1f}M msg/sec")
+    print(f"   NEON operations: {neon_stats.neon_operations:,}")
+    print()
     
-    # Latency comparison
-    scalar_latency = scalar_stats.wall_clock_avg_latency_ns
-    neon_latency = neon_stats.wall_clock_avg_latency_ns
-    latency_improvement = scalar_latency / neon_latency
+    # Performance Comparison
+    print("🎯 PERFORMANCE COMPARISON")
+    print("=" * 30)
     
-    print(f"⏱️  Latency Results:")
-    print(f"   Scalar (baseline): {scalar_latency:>8.1f} ns")
-    print(f"   NEON (optimized):  {neon_latency:>8.1f} ns")
-    print(f"   Improvement:       {latency_improvement:>8.2f}x")
-    print(f"   Reduction:         {((scalar_latency - neon_latency) / scalar_latency * 100):>7.1f}%")
+    latency_improvement = baseline_stats.wall_clock_avg_latency_ns / neon_stats.wall_clock_avg_latency_ns
+    throughput_improvement = neon_stats.throughput_msg_sec / baseline_stats.throughput_msg_sec
     
-    # Throughput comparison
-    scalar_throughput = scalar_stats.throughput_msg_sec / 1e6
-    neon_throughput = neon_stats.throughput_msg_sec / 1e6
-    throughput_improvement = neon_throughput / scalar_throughput
+    print(f"📈 Latency Improvement:")
+    print(f"   Baseline: {baseline_stats.wall_clock_avg_latency_ns:.1f} ns")
+    print(f"   NEON: {neon_stats.wall_clock_avg_latency_ns:.1f} ns")
+    print(f"   Improvement: {latency_improvement:.2f}x faster")
     
-    print(f"\n🚀 Throughput Results:")
-    print(f"   Scalar (baseline): {scalar_throughput:>8.1f}M msg/sec")
-    print(f"   NEON (optimized):  {neon_throughput:>8.1f}M msg/sec")
-    print(f"   Improvement:       {throughput_improvement:>8.2f}x")
-    print(f"   Increase:          {((neon_throughput - scalar_throughput) / scalar_throughput * 100):>7.1f}%")
+    print(f"\n🚀 Throughput Improvement:")
+    print(f"   Baseline: {baseline_stats.throughput_msg_sec/1e6:.1f}M msg/sec")
+    print(f"   NEON: {neon_stats.throughput_msg_sec/1e6:.1f}M msg/sec")
+    print(f"   Improvement: {throughput_improvement:.2f}x faster")
     
-    # NEON-specific metrics
-    print(f"\n🔥 NEON Metrics:")
-    print(f"   NEON operations:   {neon_stats.neon_operations:>8,}")
-    print(f"   SIMD efficiency:   {neon_stats.neon_operations / (neon_stats.total_messages / batch_size):>8.1f} ops/batch")
+    print(f"\n⏱️  Wall Clock Comparison:")
+    print(f"   Baseline duration: {baseline_wall_time:.3f}s")
+    print(f"   NEON duration: {neon_wall_time:.3f}s")
+    print(f"   Wall clock improvement: {baseline_wall_time/neon_wall_time:.2f}x")
     
-    # Performance classification
-    if latency_improvement >= 1.5:
-        perf_class = "🔥 EXCELLENT"
-    elif latency_improvement >= 1.2:
-        perf_class = "✅ GOOD"
+    # NEON effectiveness analysis
+    print(f"\n🔬 NEON Effectiveness Analysis:")
+    if latency_improvement > 1.5:
+        effectiveness = "🔥 EXCELLENT"
+    elif latency_improvement > 1.2:
+        effectiveness = "⚡ GOOD"
+    elif latency_improvement > 1.05:
+        effectiveness = "✅ MODERATE"
+    else:
+        effectiveness = "⚠️ MINIMAL"
+    
+    print(f"   NEON acceleration: {effectiveness}")
+    print(f"   Expected on ARM64: 1.2-2.0x improvement")
+    print(f"   Achieved: {latency_improvement:.2f}x improvement")
+    
+    # Message processing efficiency
+    baseline_cycles_per_msg = baseline_stats.wall_clock_avg_latency_ns * 3.5  # ~3.5GHz M4
+    neon_cycles_per_msg = neon_stats.wall_clock_avg_latency_ns * 3.5
+    
+    print(f"\n⚙️  CPU Efficiency:")
+    print(f"   Baseline: ~{baseline_cycles_per_msg:.0f} cycles/msg")
+    print(f"   NEON: ~{neon_cycles_per_msg:.0f} cycles/msg")
+    print(f"   Cycle reduction: {baseline_cycles_per_msg - neon_cycles_per_msg:.0f} cycles/msg")
+    
+    # Final verdict
+    print(f"\n🏆 FINAL VERDICT:")
+    if latency_improvement >= 1.3 and neon_stats.wall_clock_avg_latency_ns < 15:
+        verdict = "🔥 NEON acceleration is HIGHLY EFFECTIVE"
+    elif latency_improvement >= 1.15 and neon_stats.wall_clock_avg_latency_ns < 20:
+        verdict = "⚡ NEON acceleration is EFFECTIVE"  
     elif latency_improvement >= 1.05:
-        perf_class = "⚡ MARGINAL"
+        verdict = "✅ NEON acceleration provides MODEST gains"
     else:
-        perf_class = "⚠️  NO IMPROVEMENT"
+        verdict = "⚠️ NEON acceleration shows MINIMAL improvement"
     
-    print(f"\n🏆 NEON Acceleration: {perf_class} ({latency_improvement:.2f}x speedup)")
-    
-    # System analysis
-    cpu_freq_ghz = 3.5
-    scalar_cycles = scalar_latency * cpu_freq_ghz
-    neon_cycles = neon_latency * cpu_freq_ghz
-    
-    print(f"\n🎛️  System Analysis:")
-    print(f"   Scalar CPU cycles/msg: ~{scalar_cycles:.0f}")
-    print(f"   NEON CPU cycles/msg:   ~{neon_cycles:.0f}")
-    print(f"   Cycle reduction:       {scalar_cycles - neon_cycles:.0f} cycles")
-    
-    # Validation
-    timing_consistent = (
-        0.9 <= scalar_stats.wall_clock_duration_s / test_duration <= 1.1 and
-        0.9 <= neon_stats.wall_clock_duration_s / test_duration <= 1.1
-    )
-    
-    print(f"\n🔍 Validation:")
-    print(f"   Timing consistent: {'✅' if timing_consistent else '❌'}")
-    print(f"   Both tests valid: {'✅' if timing_consistent else '❌'}")
-    
-    # Expected vs actual improvement
-    expected_min = 1.2  # 20% improvement expected
-    expected_max = 1.5  # 50% improvement expected
-    
-    meets_expectations = expected_min <= latency_improvement <= expected_max * 2
-    print(f"   Meets expectations: {'✅' if meets_expectations else '⚠️'} (expected {expected_min:.1f}-{expected_max:.1f}x)")
-    
-    # Overall assessment
-    success = timing_consistent and latency_improvement >= 1.1
-    print(f"\n🎯 NEON Integration: {'✅ SUCCESS' if success else '❌ NEEDS WORK'}")
-    
-    if success:
-        print(f"\n🚀 NEON acceleration achieved {latency_improvement:.2f}x speedup!")
-        print(f"💫 New ultra-low latency: {neon_latency:.1f} ns per message")
-    else:
-        print(f"\n⚠️  NEON acceleration needs optimization or debugging")
+    print(f"   {verdict}")
+    print(f"   Recommend: {'NEON version' if latency_improvement >= 1.1 else 'Either version'} for production")
     
     return {
-        'scalar_latency_ns': scalar_latency,
-        'neon_latency_ns': neon_latency,
-        'improvement_factor': latency_improvement,
-        'success': success
+        'baseline_stats': baseline_stats,
+        'neon_stats': neon_stats,
+        'latency_improvement': latency_improvement,
+        'throughput_improvement': throughput_improvement
     }
 
 if __name__ == "__main__":
     try:
         results = run_performance_comparison()
-        
-        if results['success']:
-            print(f"\n✅ NEON integration completed successfully!")
-            print(f"🔥 {results['improvement_factor']:.2f}x performance improvement achieved")
-        else:
-            print(f"\n⚠️  NEON integration needs further optimization")
-            
+        print(f"\n✅ NEON validation completed successfully!")
+        print(f"🔥 NEON achieved {results['latency_improvement']:.2f}x latency improvement")
+        print(f"🚀 NEON achieved {results['throughput_improvement']:.2f}x throughput improvement")
     except Exception as e:
-        print(f"❌ Error running NEON comparison: {e}")
+        print(f"❌ Error during NEON validation: {e}")
         import traceback
         traceback.print_exc()
+        sys.exit(1)

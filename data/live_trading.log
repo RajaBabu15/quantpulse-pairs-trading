@@ -1,7 +1,0 @@
-2025-08-31 02:16:27,135 | INFO | 🌐 Starting live data feed for 15 symbols
-2025-08-31 02:16:30,729 | WARNING | Failed to fetch AAPL: Too Many Requests. Rate limited. Try after a while.
-2025-08-31 02:16:32,054 | WARNING | Failed to fetch MSFT: Too Many Requests. Rate limited. Try after a while.
-2025-08-31 02:16:32,140 | INFO | 🔬 Discovering pairs from live market data...
-2025-08-31 02:16:32,146 | INFO |    📊 Analyzing 0 symbols with sufficient data
-2025-08-31 02:16:32,147 | INFO | 🛑 Data feed stopped
-2025-08-31 02:16:32,148 | INFO | 🛑 Live trading engine stopped
