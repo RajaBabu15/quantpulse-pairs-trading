@@ -230,6 +230,7 @@ double cpp_cached_objective_evaluation(const double* params, size_t param_count,
     return result;
 }
 static void cpp_print_cache_statistics() {
+    printf("📊 ENTERING cpp_print_cache_statistics() at %s\n", get_current_time().c_str());
     auto backtest_stats = backtest_cache.get_stats();
     auto objective_stats = objective_cache.get_stats();
     auto spread_stats = spread_cache.get_stats();
@@ -237,13 +238,17 @@ static void cpp_print_cache_statistics() {
     printf("Backtest Cache - Size: %zu, Hit Rate: %.2f%%, Hits: %zu, Misses: %zu, Evictions: %zu\\n", backtest_stats.size, backtest_stats.hit_rate * 100, backtest_stats.hits, backtest_stats.misses, backtest_stats.evictions);
     printf("Objective Cache - Size: %zu, Hit Rate: %.2f%%, Hits: %zu, Misses: %zu, Evictions: %zu\\n", objective_stats.size, objective_stats.hit_rate * 100, objective_stats.hits, objective_stats.misses, objective_stats.evictions);
     printf("Spread Cache - Size: %zu, Hit Rate: %.2f%%, Hits: %zu, Misses: %zu, Evictions: %zu\\n", spread_stats.size, spread_stats.hit_rate * 100, spread_stats.hits, spread_stats.misses, spread_stats.evictions);
+    printf("✅ EXITING cpp_print_cache_statistics() at %s\n", get_current_time().c_str());
 }
 static void cpp_clear_all_caches() {
+    printf("🧹 ENTERING cpp_clear_all_caches() at %s\n", get_current_time().c_str());
     backtest_cache.clear();
     objective_cache.clear();
     spread_cache.clear();
+    printf("✅ EXITING cpp_clear_all_caches() at %s\n", get_current_time().c_str());
 }
 static void cpp_warm_up_caches(const double* prices1, const double* prices2, size_t n) {
+    printf("🔥 ENTERING cpp_warm_up_caches() at %s\n", get_current_time().c_str());
     double common_params[][7] = {
         {20, 2.0, 0.5, 10000, 0.001, 2.0, 1.0},
         {25, 2.5, 0.3, 15000, 0.001, 2.5, 1.5},
@@ -260,6 +265,7 @@ static void cpp_warm_up_caches(const double* prices1, const double* prices2, siz
     }
     printf("ARM64 cache warm-up complete.\\n");
     cpp_print_cache_statistics();
+    printf("✅ EXITING cpp_warm_up_caches() at %s\n", get_current_time().c_str());
 }
 
 static CBacktestResult to_c_result(const BacktestResult& r) {
@@ -302,19 +308,31 @@ static CBacktestResult to_c_result(const BacktestResult& r) {
 }
 extern "C" {
 CBacktestResult cached_vectorized_backtest(const double* prices1, const double* prices2, size_t n, TradingParameters params) {
+    printf("💾 ENTERING cached_vectorized_backtest() at %s\n", get_current_time().c_str());
     BacktestResult r = cpp_cached_vectorized_backtest(prices1, prices2, n, params);
-    return to_c_result(r);
+    CBacktestResult result = to_c_result(r);
+    printf("✅ EXITING cached_vectorized_backtest() at %s\n", get_current_time().c_str());
+    return result;
 }
 double cached_objective_evaluation(const double* params, size_t param_count, const double* prices1, const double* prices2, size_t n, double l1_ratio, double alpha, double kl_weight) {
-    return cpp_cached_objective_evaluation(params, param_count, prices1, prices2, n, l1_ratio, alpha, kl_weight);
+    printf("🎯 ENTERING cached_objective_evaluation() at %s\n", get_current_time().c_str());
+    double result = cpp_cached_objective_evaluation(params, param_count, prices1, prices2, n, l1_ratio, alpha, kl_weight);
+    printf("✅ EXITING cached_objective_evaluation() at %s\n", get_current_time().c_str());
+    return result;
 }
 void print_cache_statistics() {
+    printf("📊 ENTERING print_cache_statistics() at %s\n", get_current_time().c_str());
     cpp_print_cache_statistics();
+    printf("✅ EXITING print_cache_statistics() at %s\n", get_current_time().c_str());
 }
 void clear_all_caches() {
+    printf("🧹 ENTERING clear_all_caches() at %s\n", get_current_time().c_str());
     cpp_clear_all_caches();
+    printf("✅ EXITING clear_all_caches() at %s\n", get_current_time().c_str());
 }
 void warm_up_caches(const double* prices1, const double* prices2, size_t n) {
+    printf("🔥 ENTERING warm_up_caches() at %s\n", get_current_time().c_str());
     cpp_warm_up_caches(prices1, prices2, n);
+    printf("✅ EXITING warm_up_caches() at %s\n", get_current_time().c_str());
 }
 }

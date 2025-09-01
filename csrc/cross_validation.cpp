@@ -255,6 +255,7 @@ static CBacktestResult to_c_result(const BacktestResult& r) {
 
 extern "C" {
 void calculate_spread_and_zscore(const double* prices1, const double* prices2, size_t n, int lookback, double* spread, double* z_scores) {
+    printf("📊 ENTERING calculate_spread_and_zscore() at %s\n", get_current_time().c_str());
     if (!prices1 || !prices2 || !spread || !z_scores || n == 0 || lookback <= 0) return;
     const size_t simd_width = 2;
     const size_t simd_end = (n / simd_width) * simd_width;
@@ -274,25 +275,36 @@ void calculate_spread_and_zscore(const double* prices1, const double* prices2, s
         double std_dev = simd::vectorized_std(window, lookback, mean);
         z_scores[i] = (spread[i] - mean) / (std_dev + EPSILON);
     }
+    printf("✅ EXITING calculate_spread_and_zscore() at %s\n", get_current_time().c_str());
 }
 CBacktestResult vectorized_backtest(const double* prices1, const double* prices2, size_t n, TradingParameters params) {
+    printf("🚀 ENTERING vectorized_backtest() at %s\n", get_current_time().c_str());
     BacktestResult r = cpp_vectorized_backtest(prices1, prices2, n, params);
-    return to_c_result(r);
+    CBacktestResult result = to_c_result(r);
+    printf("✅ EXITING vectorized_backtest() at %s\n", get_current_time().c_str());
+    return result;
 }
 size_t backtest_trade_returns(const double* prices1, const double* prices2, size_t n, TradingParameters params, double* out, size_t out_cap) {
+    printf("📈 ENTERING backtest_trade_returns() at %s\n", get_current_time().c_str());
     BacktestResult r = cpp_vectorized_backtest(prices1, prices2, n, params);
     size_t m = r.trade_returns.size();
     if (out && out_cap > 0) {
         size_t w = std::min(out_cap, m);
         std::copy(r.trade_returns.begin(), r.trade_returns.begin() + w, out);
+        printf("✅ EXITING backtest_trade_returns() at %s\n", get_current_time().c_str());
         return w;
     }
+    printf("✅ EXITING backtest_trade_returns() at %s\n", get_current_time().c_str());
     return m;
 }
 double parallel_cross_validation(const double* prices1, const double* prices2, size_t n, const double* param_array, int n_splits, double l1_ratio, double alpha, double kl_weight) {
-    return parallel_cross_validation_impl(prices1, prices2, n, param_array, n_splits, l1_ratio, alpha, kl_weight);
+    printf("🔧 ENTERING parallel_cross_validation() at %s\n", get_current_time().c_str());
+    double result = parallel_cross_validation_impl(prices1, prices2, n, param_array, n_splits, l1_ratio, alpha, kl_weight);
+    printf("✅ EXITING parallel_cross_validation() at %s\n", get_current_time().c_str());
+    return result;
 }
 void batch_parameter_optimization(const double* prices1, const double* prices2, size_t n, const double** param_sets, int n_sets, int param_len, CBacktestResult* results) {
+    printf("⚙️ ENTERING batch_parameter_optimization() at %s\n", get_current_time().c_str());
     if (!param_sets || !results || n_sets <= 0) return;
     #pragma omp parallel for
     for (int i = 0; i < n_sets; ++i) {
@@ -301,5 +313,6 @@ void batch_parameter_optimization(const double* prices1, const double* prices2, 
         BacktestResult r = cpp_vectorized_backtest(prices1, prices2, n, params);
         results[i] = to_c_result(r);
     }
+    printf("✅ EXITING batch_parameter_optimization() at %s\n", get_current_time().c_str());
 }
 }

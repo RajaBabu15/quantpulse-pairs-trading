@@ -166,7 +166,6 @@ class NativeElasticNetKLOptimizer:
         # Comprehensive price data validation
         self._validate_prices(p1, p2)
         return p1, p2
-    
     def _validate_prices(self, prices1, prices2):
         """Validate price data for trading analysis."""
         if len(prices1) != len(prices2):
@@ -181,7 +180,6 @@ class NativeElasticNetKLOptimizer:
             raise ValueError("Price data contains non-positive values")
         if np.std(prices1) == 0 or np.std(prices2) == 0:
             raise ValueError("Price data has zero variance (constant prices)")
-    
     def _validate_parameters(self, params):
         """Validate parameter consistency."""
         if params['z_exit'] >= params['z_entry']:

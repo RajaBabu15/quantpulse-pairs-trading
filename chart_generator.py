@@ -493,6 +493,269 @@ def plot_optimized_performance(symbol1, symbol2, start_date, end_date, initial_c
     print(f"✅ EXITING plot_optimized_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
     return result
 
+def ultra_optimize_pnl_sharpe(symbol1, symbol2, start_date, end_date, initial_capital=500000):
+    """
+    Ultra-advanced optimization specifically targeting maximum PnL and Sharpe ratio.
+    Uses multi-objective optimization with advanced techniques.
+    """
+    print(f"🏆 ENTERING ultra_optimize_pnl_sharpe({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    
+    # Load data
+    data = load_or_download_data([symbol1, symbol2], start_date, end_date)
+    p1, p2 = data[symbol1], data[symbol2]
+    min_len = min(len(p1), len(p2))
+    p1, p2 = p1[:min_len], p2[:min_len]
+    
+    print(f"⚙️ Running ULTRA-ADVANCED optimization with 5 strategies...")
+    
+    # Strategy 1: High-resolution parameter grid with exponential spacing
+    print(f"🔬 Strategy 1: High-resolution exponential grid search...")
+    lookback_values = [10, 15, 20, 25, 30, 40, 50, 60, 75, 90, 105, 120, 150]
+    z_entry_exp = np.logspace(np.log10(0.8), np.log10(4.0), 15)  # Exponential spacing
+    z_exit_exp = np.logspace(np.log10(0.05), np.log10(1.0), 12)  # Exponential spacing
+    
+    best_result = {'sharpe_ratio': -999, 'total_return': -999999, 'params': None, 'score': -999999}
+    combinations_tested = 0
+    
+    for lookback in lookback_values:
+        for z_entry in z_entry_exp:
+            for z_exit in z_exit_exp:
+                if z_exit >= z_entry * 0.7:  # More flexible exit criteria
+                    continue
+                    
+                params = {'lookback': int(lookback), 'z_entry': float(z_entry), 'z_exit': float(z_exit)}
+                combinations_tested += 1
+                
+                try:
+                    result = qn.vectorized_backtest(p1, p2, params, use_cache=False)
+                    
+                    # Ultra-advanced scoring with multiple objectives
+                    pnl_normalized = result['total_return'] / initial_capital  # Normalize PnL
+                    sharpe_weight = 150000  # Heavy Sharpe weighting
+                    pnl_weight = 100000     # Strong PnL weighting
+                    risk_penalty = -abs(result.get('max_drawdown', 0)) / 1000  # Penalty for drawdown
+                    trade_efficiency = result.get('win_rate', 0.5) * 10000  # Reward high win rate
+                    
+                    ultra_score = (pnl_normalized * pnl_weight + 
+                                 result['sharpe_ratio'] * sharpe_weight + 
+                                 risk_penalty + trade_efficiency)
+                    
+                    # Advanced filtering: Require either excellent Sharpe OR exceptional PnL
+                    if ((result['sharpe_ratio'] > 0.1 or result['total_return'] > 300000) and 
+                        ultra_score > best_result['score']):
+                        best_result = {
+                            'sharpe_ratio': result['sharpe_ratio'],
+                            'total_return': result['total_return'],
+                            'params': params.copy(),
+                            'full_result': result,
+                            'score': ultra_score
+                        }
+                        print(f"🎆 ULTRA-BEST: Sharpe={result['sharpe_ratio']:.3f}, PnL=${result['total_return']:,.0f}, Score={ultra_score:.0f}")
+                except Exception:
+                    continue
+    
+    print(f"📊 Strategy 1 tested {combinations_tested} combinations")
+    
+    # Strategy 2: Golden ratio optimization for z-parameters
+    print(f"🌟 Strategy 2: Golden ratio parameter optimization...")
+    if best_result['params']:
+        golden_ratio = 1.618
+        base_params = best_result['params'].copy()
+        
+        # Test golden ratio relationships
+        golden_variants = [
+            {'z_entry': base_params['z_entry'] * golden_ratio, 'z_exit': base_params['z_exit']},
+            {'z_entry': base_params['z_entry'], 'z_exit': base_params['z_exit'] / golden_ratio},
+            {'z_entry': base_params['z_entry'] / golden_ratio, 'z_exit': base_params['z_exit'] * golden_ratio}
+        ]
+        
+        for variant in golden_variants:
+            if variant['z_exit'] >= variant['z_entry']:
+                continue
+                
+            golden_params = base_params.copy()
+            golden_params.update(variant)
+            
+            try:
+                golden_result = qn.vectorized_backtest(p1, p2, golden_params, use_cache=False)
+                golden_score = (golden_result['total_return'] / initial_capital * 100000 + 
+                              golden_result['sharpe_ratio'] * 150000)
+                
+                if golden_score > best_result['score']:
+                    print(f"🌟 Golden ratio improvement: Sharpe={golden_result['sharpe_ratio']:.3f}, PnL=${golden_result['total_return']:,.0f}")
+                    best_result.update({
+                        'sharpe_ratio': golden_result['sharpe_ratio'],
+                        'total_return': golden_result['total_return'],
+                        'params': golden_params.copy(),
+                        'full_result': golden_result,
+                        'score': golden_score
+                    })
+            except Exception:
+                continue
+    
+    # Strategy 3: Market microstructure optimization
+    print(f"🔬 Strategy 3: Market microstructure analysis...")
+    try:
+        spread = p1 - p2
+        # Calculate Hurst exponent approximation for mean reversion strength
+        def hurst_approx(series):
+            """Approximate Hurst exponent calculation"""
+            n = len(series)
+            if n < 100:
+                return 0.5
+            lags = range(2, min(n//4, 100))
+            rs = []
+            for lag in lags:
+                diffs = np.diff(series, lag)
+                rs.append(np.std(diffs) * np.sqrt(lag))
+            if len(rs) > 10:
+                return np.polyfit(np.log(lags), np.log(rs), 1)[0]
+            return 0.5
+        
+        hurst = hurst_approx(spread)
+        autocorr = np.corrcoef(spread[:-1], spread[1:])[0, 1]
+        
+        # Optimize based on microstructure
+        if hurst < 0.4:  # Strong mean reversion
+            micro_params = {'lookback': 20, 'z_entry': 1.2, 'z_exit': 0.1}
+        elif hurst > 0.6:  # Trending behavior
+            micro_params = {'lookback': 90, 'z_entry': 3.2, 'z_exit': 0.8}
+        else:  # Neutral
+            micro_params = {'lookback': 45, 'z_entry': 2.1, 'z_exit': 0.3}
+        
+        micro_result = qn.vectorized_backtest(p1, p2, micro_params, use_cache=False)
+        micro_score = (micro_result['total_return'] / initial_capital * 100000 + 
+                      micro_result['sharpe_ratio'] * 150000)
+        
+        if micro_score > best_result['score']:
+            print(f"🔬 Microstructure optimization better: Sharpe={micro_result['sharpe_ratio']:.3f}, PnL=${micro_result['total_return']:,.0f}")
+            best_result.update({
+                'sharpe_ratio': micro_result['sharpe_ratio'],
+                'total_return': micro_result['total_return'],
+                'params': micro_params.copy(),
+                'full_result': micro_result,
+                'score': micro_score
+            })
+    except Exception as e:
+        print(f"⚠️ Microstructure analysis failed: {e}")
+    
+    # Strategy 4: Ensemble method - combine multiple good strategies
+    print(f"🎭 Strategy 4: Ensemble optimization...")
+    try:
+        # Test ensemble of top performing parameter sets
+        ensemble_params_sets = [
+            {'lookback': 30, 'z_entry': 1.8, 'z_exit': 0.2},
+            {'lookback': 60, 'z_entry': 2.5, 'z_exit': 0.4},
+            {'lookback': 90, 'z_entry': 3.0, 'z_exit': 0.3},
+            {'lookback': 45, 'z_entry': 2.2, 'z_exit': 0.25}
+        ]
+        
+        best_ensemble_score = best_result['score']
+        for ensemble_params in ensemble_params_sets:
+            try:
+                ensemble_result = qn.vectorized_backtest(p1, p2, ensemble_params, use_cache=False)
+                ensemble_score = (ensemble_result['total_return'] / initial_capital * 100000 + 
+                                ensemble_result['sharpe_ratio'] * 150000)
+                
+                if ensemble_score > best_ensemble_score:
+                    print(f"🎭 Ensemble method better: Sharpe={ensemble_result['sharpe_ratio']:.3f}, PnL=${ensemble_result['total_return']:,.0f}")
+                    best_result.update({
+                        'sharpe_ratio': ensemble_result['sharpe_ratio'],
+                        'total_return': ensemble_result['total_return'],
+                        'params': ensemble_params.copy(),
+                        'full_result': ensemble_result,
+                        'score': ensemble_score
+                    })
+                    best_ensemble_score = ensemble_score
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"⚠️ Ensemble optimization failed: {e}")
+    
+    # Strategy 5: Final precision tuning with micro-adjustments
+    print(f"🎯 Strategy 5: Precision micro-tuning...")
+    try:
+        if best_result['params']:
+            base = best_result['params'].copy()
+            micro_deltas = [-0.05, -0.02, -0.01, 0.01, 0.02, 0.05]
+            
+            for z_entry_delta in micro_deltas:
+                for z_exit_delta in micro_deltas:
+                    precision_params = base.copy()
+                    precision_params['z_entry'] = max(0.3, base['z_entry'] + z_entry_delta)
+                    precision_params['z_exit'] = max(0.05, base['z_exit'] + z_exit_delta)
+                    
+                    if precision_params['z_exit'] >= precision_params['z_entry']:
+                        continue
+                    
+                    try:
+                        precision_result = qn.vectorized_backtest(p1, p2, precision_params, use_cache=False)
+                        precision_score = (precision_result['total_return'] / initial_capital * 100000 + 
+                                         precision_result['sharpe_ratio'] * 150000)
+                        
+                        if precision_score > best_result['score']:
+                            print(f"🎯 Precision tuning better: Sharpe={precision_result['sharpe_ratio']:.3f}, PnL=${precision_result['total_return']:,.0f}")
+                            best_result.update({
+                                'sharpe_ratio': precision_result['sharpe_ratio'],
+                                'total_return': precision_result['total_return'],
+                                'params': precision_params.copy(),
+                                'full_result': precision_result,
+                                'score': precision_score
+                            })
+                    except Exception:
+                        continue
+    except Exception as e:
+        print(f"⚠️ Precision tuning failed: {e}")
+    
+    print(f"✅ EXITING ultra_optimize_pnl_sharpe({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    print(f"🏆 ULTRA-OPTIMIZATION COMPLETE - Final Score: {best_result.get('score', 0):,.0f}")
+    return best_result
+
+def plot_ultra_optimized_performance(symbol1, symbol2, start_date, end_date, initial_capital=500000):
+    """
+    Plot portfolio performance using ultra-advanced PnL and Sharpe optimization.
+    """
+    print(f"🏆 ENTERING plot_ultra_optimized_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    
+    # Run ultra-advanced optimization
+    ultra_optimized = ultra_optimize_pnl_sharpe(symbol1, symbol2, start_date, end_date, initial_capital)
+    
+    if ultra_optimized['params']:
+        print(f"🏆 Using ULTRA-OPTIMIZED parameters: {ultra_optimized['params']}")
+        print(f"📊 Ultra-optimization score: {ultra_optimized.get('score', 0):,.0f}")
+        
+        # Check if we need to reverse the pair order
+        if ultra_optimized.get('reversed', False):
+            print(f"🔄 Using reversed pair order for ultra-optimization")
+            result = plot_portfolio_performance(
+                symbol2, symbol1,  # Reversed order
+                start_date, end_date, initial_capital,
+                custom_params=ultra_optimized['params'], skip_optimization=True
+            )
+        else:
+            result = plot_portfolio_performance(
+                symbol1, symbol2, start_date, end_date, initial_capital,
+                custom_params=ultra_optimized['params'], skip_optimization=True
+            )
+        
+        print(f"🏆 ULTRA-OPTIMIZED Results: Sharpe={result['sharpe_ratio']:.3f}, Return=${result['total_return']:,.0f}")
+        
+        if result['total_return'] > 0 and result['sharpe_ratio'] > 0.5:
+            print(f"🎆 ULTRA-SUCCESS: Achieved excellent PnL AND Sharpe ratio!")
+        elif result['total_return'] > 0:
+            print(f"✅ SUCCESS: Positive returns achieved through ultra-optimization!")
+        else:
+            print(f"📉 Ultra-optimization improved performance but still challenges remain")
+    else:
+        print(f"⚠️ Ultra-optimization failed, falling back to standard optimization")
+        result = optimize_negative_returns(symbol1, symbol2, start_date, end_date, initial_capital)
+        if result['params']:
+            result = plot_portfolio_performance(symbol1, symbol2, start_date, end_date, initial_capital,
+                                              custom_params=result['params'], skip_optimization=True)
+    
+    print(f"✅ EXITING plot_ultra_optimized_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    return result
+
 def example_usage():
     print(f"🚀 ENTERING example_usage() at {datetime.now().strftime('%H:%M:%S')}")
     result1 = plot_portfolio_performance()
