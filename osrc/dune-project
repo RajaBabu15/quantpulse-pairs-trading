@@ -1,0 +1,24 @@
+(lang dune 3.0)
+
+(package
+ (name quantpulse-ocaml)
+ (depends
+  ocaml
+  dune
+  lwt
+  unix
+  threads))
+
+(executable
+ (public_name quantpulse-ocaml)
+ (name ocaml_bindings)
+ (modules
+  trading_engine
+  vectorized_math
+  cross_validation
+  performance_cache
+  ocaml_bindings)
+ (libraries
+  lwt
+  unix
+  threads))

@@ -1,0 +1,238 @@
+# Pre-commit Configuration for QuantPulse Pairs Trading System
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # General file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        description: Remove trailing whitespace
+      - id: end-of-file-fixer
+        description: Ensure files end with newline
+      - id: check-yaml
+        description: Check YAML syntax
+        args: [--allow-multiple-documents]
+      - id: check-toml
+        description: Check TOML syntax
+      - id: check-json
+        description: Check JSON syntax
+      - id: check-added-large-files
+        description: Check for large files
+        args: [--maxkb=10240]  # 10MB limit
+      - id: check-merge-conflict
+        description: Check for merge conflicts
+      - id: check-case-conflict
+        description: Check for case conflicts
+      - id: check-symlinks
+        description: Check for broken symlinks
+      - id: check-executables-have-shebangs
+        description: Check executables have shebangs
+      - id: check-shebang-scripts-are-executable
+        description: Check shebang scripts are executable
+      - id: mixed-line-ending
+        description: Check for mixed line endings
+        args: [--fix=lf]
+
+  # Python code formatting
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        description: Format Python code with Black
+        language_version: python3
+        args: [--line-length=88]
+
+  # Python import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        description: Sort Python imports
+        args: [--profile=black, --line-length=88]
+
+  # Python linting
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+        description: Lint Python code with flake8
+        additional_dependencies:
+          - flake8-docstrings>=1.7.0
+          - flake8-bugbear>=23.0.0
+          - flake8-comprehensions>=3.14.0
+          - flake8-simplify>=0.20.0
+        args:
+          - --max-line-length=88
+          - --extend-ignore=E203,W503,E501  # Black compatibility
+          - --per-file-ignores=__init__.py:F401,setup.py:E501
+          - --docstring-convention=google
+
+  # Python type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        description: Static type checking with MyPy
+        additional_dependencies:
+          - types-setuptools
+          - numpy
+          - pandas-stubs
+        args:
+          - --ignore-missing-imports
+          - --no-strict-optional
+        exclude: ^(setup\.py|tests/|docs/)
+
+  # Security linting
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        description: Security linting with Bandit
+        args:
+          - -r
+          - --format=custom
+          - --skip=B101,B601  # Skip assert and shell warnings
+        exclude: ^tests/
+
+  # Dependency vulnerability scanning
+  - repo: https://github.com/gitguardian/ggshield
+    rev: v1.25.0
+    hooks:
+      - id: ggshield
+        description: GitGuardian security scanning
+        language: python
+        stages: [commit]
+
+  # Documentation checks
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        description: Check Python docstring style
+        args:
+          - --convention=google
+          - --add-ignore=D100,D104,D105  # Allow missing docstrings in some cases
+        exclude: ^(tests/|setup\.py)
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        description: Format YAML, JSON, and Markdown
+        types_or: [yaml, json, markdown]
+        args: [--tab-width=2, --prose-wrap=preserve]
+        exclude: ^(CHANGELOG\.md|\.github/ISSUE_TEMPLATE/)
+
+  # C++ formatting (if clang-format is available)
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v17.0.6
+    hooks:
+      - id: clang-format
+        description: Format C++ code
+        files: \.(cpp|cc|cxx|c|hpp|h|hxx)$
+        args: [-style=Google, -i]
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.6
+    hooks:
+      - id: shellcheck
+        description: Lint shell scripts
+        args: [-e, SC1091, -e, SC2086]  # Ignore some common warnings
+
+  # CMake formatting (if available)
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
+      - id: cmake-format
+        description: Format CMake files
+        additional_dependencies: [pyyaml>=5.1]
+        args: [--in-place]
+      - id: cmake-lint
+        description: Lint CMake files
+        args: [--disabled-codes=C0103]
+
+  # Git commit message formatting
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.13.0
+    hooks:
+      - id: commitizen
+        description: Check commit message format
+        stages: [commit-msg]
+
+  # Local hooks for project-specific checks
+  - repo: local
+    hooks:
+      # Check for debug prints
+      - id: check-debug-prints
+        name: Check for debug prints
+        description: Ensure no debug print statements are committed
+        entry: bash -c 'grep -r "print(" --include="*.py" . && exit 1 || exit 0'
+        language: system
+        files: \.py$
+        exclude: ^(tests/|examples/|docs/)
+
+      # Check for TODO/FIXME comments
+      - id: check-todos
+        name: Check TODO/FIXME comments
+        description: Flag TODO and FIXME comments for review
+        entry: bash -c 'grep -rn "TODO\|FIXME\|XXX\|HACK" --include="*.py" --include="*.cpp" --include="*.h" . && echo "Please review TODO/FIXME comments before committing" || true'
+        language: system
+        verbose: true
+
+      # Ensure __init__.py files exist
+      - id: check-init-files
+        name: Check __init__.py files
+        description: Ensure all Python packages have __init__.py
+        entry: python -c "
+        import os
+        import sys
+        
+        for root, dirs, files in os.walk('.'):
+            if 'venv' in root or '.git' in root or '__pycache__' in root:
+                continue
+            if any(f.endswith('.py') for f in files):
+                if '__init__.py' not in files and root != '.':
+                    print(f'Missing __init__.py in {root}')
+                    sys.exit(1)
+        print('All Python packages have __init__.py files')
+        "
+        language: system
+        pass_filenames: false
+
+      # Run basic Python syntax check
+      - id: python-syntax-check
+        name: Python syntax check
+        description: Check Python syntax
+        entry: python -m py_compile
+        language: system
+        files: \.py$
+
+      # Check C++ compilation (basic)
+      - id: cpp-syntax-check
+        name: C++ syntax check
+        description: Basic C++ syntax validation
+        entry: bash -c 'for file in "$@"; do g++ -fsyntax-only -std=c++17 "$file" || exit 1; done'
+        language: system
+        files: \.(cpp|cc|cxx|c)$
+        require_serial: true
+
+# Pre-commit configuration
+default_stages: [commit]
+minimum_pre_commit_version: '3.0.0'
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+    
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: monthly
+  skip: [ggshield, commitizen]  # Skip hooks that need secrets/special setup
+  submodules: false

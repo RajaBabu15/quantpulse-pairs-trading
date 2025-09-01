@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/YOUR_USERNAME/quantpulse-pairs-trading/discussions
+    about: Ask questions, share ideas, and discuss features with the community
+  - name: 📚 Documentation
+    url: https://github.com/YOUR_USERNAME/quantpulse-pairs-trading#readme
+    about: Check the README and documentation first
+  - name: ❓ Stack Overflow
+    url: https://stackoverflow.com/questions/tagged/quantpulse
+    about: Ask technical questions on Stack Overflow with the 'quantpulse' tag

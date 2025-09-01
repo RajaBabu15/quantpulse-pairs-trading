@@ -1,23 +1,112 @@
-# Compiled extensions
-*.so
-*.dll
-*.dylib
-
-# Python cache
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Build directories
-build/
-dist/
+*.so
+*.dll
+*.dylib
 *.egg-info/
+dist/
+build/
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDE files
-.vscode/
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# PyCharm & IDEs
 .idea/
+.vscode/
 *.swp
 *.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Documentation
+docs/_build/
+site/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Data & Cache Files  
+data/cache/
+*.csv
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+logs/
+*.log
+
+# Compiled C++ Extensions
+*.o
+*.obj
+*.lib
+*.exp
+*.pdb
+*.ilk
+
+# Trading Data
+historical_data/
+live_data/
+backtest_results/
+optimization_cache/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Temporary Files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Generated Charts & Reports
+static/*.png
+static/*.pdf
+reports/
+output/
+
+# Profiling Data
+*.prof
+*.lprof
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
 # System files
 .DS_Store

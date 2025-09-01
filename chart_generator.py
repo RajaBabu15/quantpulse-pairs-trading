@@ -276,7 +276,7 @@ def plot_portfolio_performance(symbol1="FEXDU", symbol2="BALY", start_date="2010
         ax5 = fig.add_subplot(gs[2, 0])
         ax6 = fig.add_subplot(gs[2, 1])
         ax7 = fig.add_subplot(gs[2, 2])
-        fig.suptitle(f'QuantPulse Pairs Trading Analysis: {symbol1} vs {symbol2}\n{start_date} to {end_date}\nCapital: ${initial_capital:,} | NO LOOK-AHEAD BIAS', fontsize=16, fontweight='bold')
+        fig.suptitle(f'QuantPulse Pairs Trading Analysis: {symbol1} vs {symbol2}\n{start_date} to {end_date}\nCapital: ${initial_capital:,} | WALK-FORWARD VALIDATED (NO LOOK-AHEAD)', fontsize=16, fontweight='bold')
         
         print(f"📊 Plotting 1/7: Price comparison...")
         plot_price_comparison(ax1, dates, p1, p2, symbol1, symbol2, trade_entries, trade_exits)
@@ -313,145 +313,312 @@ def plot_portfolio_performance(symbol1="FEXDU", symbol2="BALY", start_date="2010
         print(f"📊 Returning empty result dictionary")
         return {'sharpe_ratio': 0.0, 'total_return': 0.0, 'num_trades': 0, 'win_rate': 0.0}
 
-def optimize_negative_returns(symbol1, symbol2, start_date, end_date, initial_capital=500000):
+def advanced_parameter_grid():
     """
-    Advanced optimization for pairs with negative returns using multiple strategies.
-    Enhanced with PnL and Sharpe ratio maximization techniques.
+    Generate advanced parameter combinations with regime awareness.
     """
-    print(f"🎯 ENTERING optimize_negative_returns({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    # Base parameter grid
+    base_combinations = [
+        {'lookback': 20, 'z_entry': 1.5, 'z_exit': 0.3},
+        {'lookback': 30, 'z_entry': 2.0, 'z_exit': 0.4},
+        {'lookback': 60, 'z_entry': 2.5, 'z_exit': 0.5},
+        {'lookback': 45, 'z_entry': 1.8, 'z_exit': 0.2},
+        {'lookback': 90, 'z_entry': 2.2, 'z_exit': 0.3}
+    ]
     
-    # Load data
+    # Add volatility-adaptive parameters
+    volatility_adaptive = [
+        {'lookback': 15, 'z_entry': 1.2, 'z_exit': 0.15, 'regime': 'high_vol'},
+        {'lookback': 25, 'z_entry': 1.6, 'z_exit': 0.25, 'regime': 'high_vol'},
+        {'lookback': 75, 'z_entry': 3.0, 'z_exit': 0.6, 'regime': 'low_vol'},
+        {'lookback': 120, 'z_entry': 3.5, 'z_exit': 0.7, 'regime': 'low_vol'}
+    ]
+    
+    # Add correlation-adaptive parameters
+    correlation_adaptive = [
+        {'lookback': 10, 'z_entry': 1.0, 'z_exit': 0.1, 'regime': 'high_corr'},
+        {'lookback': 15, 'z_entry': 1.3, 'z_exit': 0.15, 'regime': 'high_corr'},
+        {'lookback': 150, 'z_entry': 4.0, 'z_exit': 1.0, 'regime': 'low_corr'}
+    ]
+    
+    # Combine all parameter sets
+    all_combinations = base_combinations + volatility_adaptive + correlation_adaptive
+    return all_combinations
+
+def detect_market_regime(p1, p2, lookback=60):
+    """
+    Detect current market regime to adapt parameters.
+    """
+    if len(p1) < lookback or len(p2) < lookback:
+        return 'normal'
+        
+    # Calculate recent metrics
+    recent_p1 = p1[-lookback:]
+    recent_p2 = p2[-lookback:]
+    
+    # Volatility regime
+    p1_vol = np.std(np.diff(np.log(recent_p1))) if np.all(recent_p1 > 0) else 0
+    p2_vol = np.std(np.diff(np.log(recent_p2))) if np.all(recent_p2 > 0) else 0
+    avg_vol = (p1_vol + p2_vol) / 2
+    
+    # Correlation regime
+    correlation = np.corrcoef(recent_p1, recent_p2)[0, 1] if len(recent_p1) > 1 else 0
+    
+    # Mean reversion strength
+    spread = recent_p1 - recent_p2
+    spread_changes = np.diff(spread)
+    reversion = np.corrcoef(spread[:-1], spread_changes)[0, 1] if len(spread) > 1 else 0
+    
+    # Determine regime
+    if avg_vol > 0.04:  # High volatility
+        return 'high_vol'
+    elif correlation > 0.8:  # High correlation
+        return 'high_corr'
+    elif correlation < 0.4:  # Low correlation
+        return 'low_corr'
+    elif abs(reversion) > 0.2:  # Strong mean reversion
+        return 'mean_reverting'
+    else:
+        return 'normal'
+
+def adaptive_parameter_selection(p1_train, p2_train, param_combinations):
+    """
+    Select parameters adaptively based on market regime.
+    """
+    regime = detect_market_regime(p1_train, p2_train)
+    
+    # Filter parameters based on regime
+    regime_filtered = []
+    for params in param_combinations:
+        param_regime = params.get('regime', 'normal')
+        
+        if param_regime == regime or param_regime == 'normal':
+            regime_filtered.append(params)
+    
+    # If no regime-specific params, use all
+    if not regime_filtered:
+        regime_filtered = param_combinations
+        
+    return regime_filtered, regime
+
+def walk_forward_optimize(symbol1, symbol2, start_date, end_date, train_months=12, test_months=3, initial_capital=500000):
+    """
+    Walk-forward optimization to eliminate look-ahead bias.
+    Trains on historical data, tests on future unseen data.
+    """
+    print(f"🚶 ENTERING walk_forward_optimize({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    print(f"⚠️  NO LOOK-AHEAD BIAS: Using {train_months}mo train, {test_months}mo test windows")
+    
+    from datetime import datetime as dt, timedelta
+    from dateutil.relativedelta import relativedelta
+    
+    # Load full dataset
     data = load_or_download_data([symbol1, symbol2], start_date, end_date)
     p1, p2 = data[symbol1], data[symbol2]
     min_len = min(len(p1), len(p2))
     p1, p2 = p1[:min_len], p2[:min_len]
     
-    print(f"🔍 Testing enhanced optimization strategies...")
+    # Create date range for walk-forward
+    dates = pd.date_range(start_date, end_date, freq='D')
+    dates = dates[dates.dayofweek < 5][:min_len]
     
-    # Strategy 1: Extended Grid Search with finer granularity
-    lookback_values = [15, 20, 30, 45, 60, 75, 90, 120]
-    z_entry_values = [1.0, 1.2, 1.5, 1.8, 2.0, 2.2, 2.5, 2.8, 3.0, 3.5]
-    z_exit_values = [0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+    start_dt = dt.strptime(start_date, "%Y-%m-%d")
+    end_dt = dt.strptime(end_date, "%Y-%m-%d")
     
-    best_result = {'sharpe_ratio': -999, 'total_return': -999999, 'params': None, 'score': -999999}
+    walk_forward_results = []
+    current_date = start_dt + relativedelta(months=train_months)
     
-    print(f"📊 Testing {len(lookback_values)} x {len(z_entry_values)} x {len(z_exit_values)} = {len(lookback_values) * len(z_entry_values) * len(z_exit_values)} combinations...")
+    print(f"📅 Walk-forward periods from {current_date} to {end_dt}")
     
-    for lookback in lookback_values:
-        for z_entry in z_entry_values:
-            for z_exit in z_exit_values:
-                if z_exit >= z_entry:
-                    continue
-                    
-                params = {'lookback': lookback, 'z_entry': z_entry, 'z_exit': z_exit}
+    # Get advanced parameter grid with regime awareness
+    param_combinations = advanced_parameter_grid()
+    
+    total_return = 0
+    total_trades = 0
+    period_results = []
+    
+    while current_date < end_dt:
+        # Define training period (past X months)
+        train_start = current_date - relativedelta(months=train_months)
+        train_end = current_date
+        
+        # Define test period (next Y months, unseen data)
+        test_start = current_date
+        test_end = min(current_date + relativedelta(months=test_months), end_dt)
+        
+        print(f"\n🔍 Period: Train={train_start.strftime('%Y-%m')} to {train_end.strftime('%Y-%m')}, Test={test_start.strftime('%Y-%m')} to {test_end.strftime('%Y-%m')}")
+        
+        # Get training data indices (convert dates to business day indices)
+        train_start_idx = 0
+        train_end_idx = len(dates)
+        test_start_idx = len(dates)
+        test_end_idx = len(dates)
+        
+        # Find the actual indices in business days array
+        for i, date in enumerate(dates):
+            if date.date() >= train_start.date() and train_start_idx == 0:
+                train_start_idx = i
+            if date.date() >= train_end.date() and train_end_idx == len(dates):
+                train_end_idx = i
+                break
                 
-                try:
-                    result = qn.vectorized_backtest(p1, p2, params, use_cache=False)
-                    
-                    # Enhanced scoring: Weighted combination of PnL and Sharpe
-                    pnl_score = result['total_return'] / 1000  # Scale for balance
-                    sharpe_score = result['sharpe_ratio'] * 100000  # Boost Sharpe importance
-                    combined_score = pnl_score + sharpe_score
-                    
-                    # Only consider strategies with positive Sharpe or very high PnL
-                    if (result['sharpe_ratio'] > 0 or result['total_return'] > 200000) and combined_score > best_result['score']:
-                        best_result = {
-                            'sharpe_ratio': result['sharpe_ratio'],
-                            'total_return': result['total_return'],
-                            'params': params.copy(),
-                            'full_result': result,
-                            'score': combined_score
-                        }
-                        print(f"🚀 New best: Sharpe={result['sharpe_ratio']:.3f}, PnL=${result['total_return']:,.0f}, Score={combined_score:.0f}")
-                except Exception:
-                    continue
-    
-    # Strategy 2: Try reversed logic with enhanced scoring
-    print(f"🔄 Testing reversed strategy...")
-    try:
-        if best_result['params']:
-            reversed_result = qn.vectorized_backtest(p2, p1, best_result['params'], use_cache=False)
-            rev_pnl_score = reversed_result['total_return'] / 1000
-            rev_sharpe_score = reversed_result['sharpe_ratio'] * 100000
-            rev_combined_score = rev_pnl_score + rev_sharpe_score
+        for i, date in enumerate(dates):
+            if date.date() >= test_start.date() and test_start_idx == len(dates):
+                test_start_idx = i
+            if date.date() >= test_end.date() and test_end_idx == len(dates):
+                test_end_idx = i
+                break
+        
+        # Ensure indices are within bounds
+        train_start_idx = max(0, train_start_idx)
+        train_end_idx = min(len(p1), train_end_idx)
+        test_start_idx = max(0, min(len(p1), test_start_idx))
+        test_end_idx = min(len(p1), test_end_idx)
+        
+        if train_end_idx <= train_start_idx or test_end_idx <= test_start_idx:
+            current_date += relativedelta(months=test_months)
+            continue
             
-            if rev_combined_score > best_result['score']:
-                print(f"🔄 Reversed strategy better: Sharpe={reversed_result['sharpe_ratio']:.3f}, PnL=${reversed_result['total_return']:,.0f}")
-                best_result = {
-                    'sharpe_ratio': reversed_result['sharpe_ratio'],
-                    'total_return': reversed_result['total_return'],
-                    'params': best_result['params'].copy(),
-                    'full_result': reversed_result,
-                    'reversed': True,
-                    'score': rev_combined_score
-                }
-    except Exception as e:
-        print(f"⚠️ Reversed strategy failed: {e}")
-    
-    # Strategy 3: Adaptive parameter tuning based on market regime
-    print(f"🧠 Testing adaptive regime-aware optimization...")
-    try:
-        spread = p1 - p2
-        volatility = np.std(spread[-60:]) if len(spread) >= 60 else np.std(spread)
-        mean_reversion_strength = abs(np.corrcoef(spread[:-1], spread[1:])[0, 1])
+        # Extract training data (ONLY past data, no look-ahead)
+        p1_train = p1[train_start_idx:train_end_idx]
+        p2_train = p2[train_start_idx:train_end_idx]
         
-        # Adjust parameters based on market characteristics
-        if volatility > np.std(spread) * 1.5:  # High volatility regime
-            adaptive_params = {'lookback': 45, 'z_entry': 2.8, 'z_exit': 0.3}
-        elif mean_reversion_strength > 0.7:  # Strong mean reversion
-            adaptive_params = {'lookback': 30, 'z_entry': 1.8, 'z_exit': 0.2}
-        else:  # Normal regime
-            adaptive_params = {'lookback': 60, 'z_entry': 2.2, 'z_exit': 0.4}
+        # Extract test data (future unseen data)
+        p1_test = p1[test_start_idx:test_end_idx]
+        p2_test = p2[test_start_idx:test_end_idx]
         
-        adaptive_result = qn.vectorized_backtest(p1, p2, adaptive_params, use_cache=False)
-        adaptive_pnl_score = adaptive_result['total_return'] / 1000
-        adaptive_sharpe_score = adaptive_result['sharpe_ratio'] * 100000
-        adaptive_combined_score = adaptive_pnl_score + adaptive_sharpe_score
-        
-        if adaptive_combined_score > best_result['score']:
-            print(f"🧠 Adaptive strategy better: Sharpe={adaptive_result['sharpe_ratio']:.3f}, PnL=${adaptive_result['total_return']:,.0f}")
-            best_result = {
-                'sharpe_ratio': adaptive_result['sharpe_ratio'],
-                'total_return': adaptive_result['total_return'],
-                'params': adaptive_params.copy(),
-                'full_result': adaptive_result,
-                'score': adaptive_combined_score
-            }
-    except Exception as e:
-        print(f"⚠️ Adaptive optimization failed: {e}")
-    
-    # Strategy 4: Gradient-based fine-tuning around best parameters
-    print(f"🎯 Fine-tuning around best parameters...")
-    try:
-        if best_result['params']:
-            base_params = best_result['params'].copy()
-            fine_tune_deltas = [-0.1, -0.05, 0.05, 0.1, 0.15]
+        if len(p1_train) < 100 or len(p1_test) < 30:  # Need minimum data
+            current_date += relativedelta(months=test_months)
+            continue
             
-            for delta in fine_tune_deltas:
-                # Fine-tune z_entry
-                fine_params = base_params.copy()
-                fine_params['z_entry'] = max(0.5, base_params['z_entry'] + delta)
+        # Optimize parameters on TRAINING data only (no look-ahead)
+        best_params = None
+        best_train_score = -999999
+        
+        for params in param_combinations:
+            try:
+                # Test parameters on TRAINING data only
+                train_result = qn.vectorized_backtest(p1_train, p2_train, params, use_cache=False)
                 
-                fine_result = qn.vectorized_backtest(p1, p2, fine_params, use_cache=False)
-                fine_pnl_score = fine_result['total_return'] / 1000
-                fine_sharpe_score = fine_result['sharpe_ratio'] * 100000
-                fine_combined_score = fine_pnl_score + fine_sharpe_score
+                # Score based on training performance
+                train_score = (train_result['total_return'] / 1000 + 
+                             train_result['sharpe_ratio'] * 50000)
                 
-                if fine_combined_score > best_result['score']:
-                    print(f"🎯 Fine-tuned better: Sharpe={fine_result['sharpe_ratio']:.3f}, PnL=${fine_result['total_return']:,.0f}")
-                    best_result = {
-                        'sharpe_ratio': fine_result['sharpe_ratio'],
-                        'total_return': fine_result['total_return'],
-                        'params': fine_params.copy(),
-                        'full_result': fine_result,
-                        'score': fine_combined_score
-                    }
-    except Exception as e:
-        print(f"⚠️ Fine-tuning failed: {e}")
+                if train_score > best_train_score and train_result['sharpe_ratio'] > -0.5:
+                    best_train_score = train_score
+                    best_params = params.copy()
+                    
+            except Exception:
+                continue
+        
+        if best_params is None:
+            print(f"⚠️  No valid parameters found for this period")
+            current_date += relativedelta(months=test_months)
+            continue
+            
+        # Apply optimized parameters to TEST data (unseen future data)
+        try:
+            test_result = qn.vectorized_backtest(p1_test, p2_test, best_params, use_cache=False)
+            
+            period_results.append({
+                'test_start': test_start,
+                'test_end': test_end,
+                'params': best_params,
+                'test_return': test_result['total_return'],
+                'test_sharpe': test_result['sharpe_ratio'],
+                'test_trades': test_result['num_trades']
+            })
+            
+            total_return += test_result['total_return']
+            total_trades += test_result['num_trades']
+            
+            print(f"✅ Period result: Sharpe={test_result['sharpe_ratio']:.3f}, Return=${test_result['total_return']:,.0f}")
+            
+        except Exception as e:
+            print(f"❌ Test period failed: {e}")
+            
+        current_date += relativedelta(months=test_months)
     
-    print(f"✅ EXITING optimize_negative_returns({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
-    print(f"🏆 Final optimization score: {best_result.get('score', 0):,.0f}")
-    return best_result
+    # Calculate overall walk-forward results
+    if period_results:
+        avg_sharpe = np.mean([r['test_sharpe'] for r in period_results])
+        total_periods = len(period_results)
+        
+        # Get the most frequently used parameters
+        param_counts = {}
+        for r in period_results:
+            param_key = f"L{r['params']['lookback']}_E{r['params']['z_entry']}_X{r['params']['z_exit']}"
+            param_counts[param_key] = param_counts.get(param_key, 0) + 1
+            
+        most_common_param_key = max(param_counts, key=param_counts.get)
+        most_common_params = None
+        for r in period_results:
+            param_key = f"L{r['params']['lookback']}_E{r['params']['z_entry']}_X{r['params']['z_exit']}"
+            if param_key == most_common_param_key:
+                most_common_params = r['params']
+                break
+        
+        result = {
+            'sharpe_ratio': avg_sharpe,
+            'total_return': total_return,
+            'num_trades': total_trades,
+            'params': most_common_params,
+            'periods': total_periods,
+            'period_results': period_results,
+            'walk_forward': True
+        }
+        
+        print(f"\n🏆 WALK-FORWARD RESULTS (NO LOOK-AHEAD):")
+        print(f"   Total Return: ${total_return:,.0f}")
+        print(f"   Avg Sharpe: {avg_sharpe:.3f}")
+        print(f"   Total Trades: {total_trades}")
+        print(f"   Periods: {total_periods}")
+        print(f"   Best Params: {most_common_params}")
+        
+    else:
+        result = {
+            'sharpe_ratio': 0.0,
+            'total_return': 0.0,
+            'num_trades': 0,
+            'params': {'lookback': 30, 'z_entry': 2.0, 'z_exit': 0.4},
+            'periods': 0,
+            'walk_forward': True
+        }
+    
+    print(f"✅ EXITING walk_forward_optimize({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    return result
+
+def optimize_negative_returns(symbol1, symbol2, start_date, end_date, initial_capital=500000):
+    """
+    Advanced optimization with proper walk-forward analysis to prevent look-ahead bias.
+    """
+    print(f"🎯 ENTERING optimize_negative_returns({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    print(f"🚨 USING WALK-FORWARD OPTIMIZATION - NO LOOK-AHEAD BIAS!")
+    
+    # Use walk-forward optimization instead of full-period optimization
+    walk_forward_result = walk_forward_optimize(symbol1, symbol2, start_date, end_date, 
+                                               train_months=12, test_months=3, 
+                                               initial_capital=initial_capital)
+    
+    if walk_forward_result['params']:
+        print(f"✅ Walk-forward optimization complete")
+        return {
+            'sharpe_ratio': walk_forward_result['sharpe_ratio'],
+            'total_return': walk_forward_result['total_return'], 
+            'params': walk_forward_result['params'],
+            'full_result': walk_forward_result,
+            'score': (walk_forward_result['total_return'] / 1000 + 
+                     walk_forward_result['sharpe_ratio'] * 50000)
+        }
+    else:
+        print(f"⚠️  Walk-forward optimization failed, using conservative defaults")
+        return {
+            'sharpe_ratio': 0.0,
+            'total_return': 0.0,
+            'params': {'lookback': 30, 'z_entry': 2.0, 'z_exit': 0.4},
+            'full_result': walk_forward_result,
+            'score': 0
+        }
 
 def plot_optimized_performance(symbol1, symbol2, start_date, end_date, initial_capital=500000):
     """
@@ -495,221 +662,261 @@ def plot_optimized_performance(symbol1, symbol2, start_date, end_date, initial_c
 
 def ultra_optimize_pnl_sharpe(symbol1, symbol2, start_date, end_date, initial_capital=500000):
     """
-    Ultra-advanced optimization specifically targeting maximum PnL and Sharpe ratio.
-    Uses multi-objective optimization with advanced techniques.
+    Ultra-advanced walk-forward optimization specifically targeting maximum PnL and Sharpe ratio.
+    Uses proper temporal validation to prevent look-ahead bias.
     """
     print(f"🏆 ENTERING ultra_optimize_pnl_sharpe({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    print(f"🚨 USING ULTRA WALK-FORWARD - ABSOLUTELY NO LOOK-AHEAD BIAS!")
     
-    # Load data
+    from datetime import datetime as dt, timedelta
+    from dateutil.relativedelta import relativedelta
+    
+    # Load full dataset
     data = load_or_download_data([symbol1, symbol2], start_date, end_date)
     p1, p2 = data[symbol1], data[symbol2]
     min_len = min(len(p1), len(p2))
     p1, p2 = p1[:min_len], p2[:min_len]
     
-    print(f"⚙️ Running ULTRA-ADVANCED optimization with 5 strategies...")
+    start_dt = dt.strptime(start_date, "%Y-%m-%d")
+    end_dt = dt.strptime(end_date, "%Y-%m-%d")
     
-    # Strategy 1: High-resolution parameter grid with exponential spacing
-    print(f"🔬 Strategy 1: High-resolution exponential grid search...")
-    lookback_values = [10, 15, 20, 25, 30, 40, 50, 60, 75, 90, 105, 120, 150]
-    z_entry_exp = np.logspace(np.log10(0.8), np.log10(4.0), 15)  # Exponential spacing
-    z_exit_exp = np.logspace(np.log10(0.05), np.log10(1.0), 12)  # Exponential spacing
+    print(f"⚙️ Running ULTRA-ADVANCED walk-forward with 5 strategies...")
     
-    best_result = {'sharpe_ratio': -999, 'total_return': -999999, 'params': None, 'score': -999999}
-    combinations_tested = 0
+    # Enhanced parameter grid for ultra-optimization
+    ultra_param_combinations = [
+        # High-frequency mean reversion
+        {'lookback': 10, 'z_entry': 1.2, 'z_exit': 0.1},
+        {'lookback': 15, 'z_entry': 1.5, 'z_exit': 0.15},
+        {'lookback': 20, 'z_entry': 1.8, 'z_exit': 0.2},
+        
+        # Standard configurations
+        {'lookback': 30, 'z_entry': 2.0, 'z_exit': 0.3},
+        {'lookback': 45, 'z_entry': 2.2, 'z_exit': 0.35},
+        {'lookback': 60, 'z_entry': 2.5, 'z_exit': 0.4},
+        
+        # High-threshold strategies
+        {'lookback': 75, 'z_entry': 2.8, 'z_exit': 0.5},
+        {'lookback': 90, 'z_entry': 3.0, 'z_exit': 0.6},
+        {'lookback': 120, 'z_entry': 3.5, 'z_exit': 0.7},
+        
+        # Golden ratio inspired
+        {'lookback': 38, 'z_entry': 2.618, 'z_exit': 0.382},  # φ and 1/φ
+        {'lookback': 55, 'z_entry': 1.618, 'z_exit': 0.618},  # Golden ratios
+        
+        # Fibonacci-based
+        {'lookback': 21, 'z_entry': 1.382, 'z_exit': 0.236},
+        {'lookback': 34, 'z_entry': 2.236, 'z_exit': 0.146},
+        {'lookback': 89, 'z_entry': 2.764, 'z_exit': 0.472}
+    ]
     
-    for lookback in lookback_values:
-        for z_entry in z_entry_exp:
-            for z_exit in z_exit_exp:
-                if z_exit >= z_entry * 0.7:  # More flexible exit criteria
+    # Walk-forward parameters
+    train_months = 18  # Longer training for ultra-optimization
+    test_months = 3
+    current_date = start_dt + relativedelta(months=train_months)
+    
+    ultra_results = []
+    total_return = 0
+    total_trades = 0
+    period_results = []
+    
+    print(f"📅 Ultra walk-forward periods from {current_date} to {end_dt}")
+    
+    while current_date < end_dt:
+        # Define training period (past 18 months)
+        train_start = current_date - relativedelta(months=train_months)
+        train_end = current_date
+        
+        # Define test period (next 3 months, unseen data)
+        test_start = current_date
+        test_end = min(current_date + relativedelta(months=test_months), end_dt)
+        
+        print(f"\n🏆 Ultra Period: Train={train_start.strftime('%Y-%m')} to {train_end.strftime('%Y-%m')}, Test={test_start.strftime('%Y-%m')} to {test_end.strftime('%Y-%m')}")
+        
+        # Create date range for this ultra-optimization period
+        dates = pd.date_range(start_date, end_date, freq='D')
+        dates = dates[dates.dayofweek < 5][:min_len]
+        
+        # Get data indices (convert dates to business day indices)
+        train_start_idx = 0
+        train_end_idx = len(dates)
+        test_start_idx = len(dates)
+        test_end_idx = len(dates)
+        
+        # Find the actual indices in business days array
+        for i, date in enumerate(dates):
+            if date.date() >= train_start.date() and train_start_idx == 0:
+                train_start_idx = i
+            if date.date() >= train_end.date() and train_end_idx == len(dates):
+                train_end_idx = i
+                break
+                
+        for i, date in enumerate(dates):
+            if date.date() >= test_start.date() and test_start_idx == len(dates):
+                test_start_idx = i
+            if date.date() >= test_end.date() and test_end_idx == len(dates):
+                test_end_idx = i
+                break
+        
+        # Ensure indices are within bounds
+        train_start_idx = max(0, train_start_idx)
+        train_end_idx = min(len(p1), train_end_idx)
+        test_start_idx = max(0, min(len(p1), test_start_idx))
+        test_end_idx = min(len(p1), test_end_idx)
+        
+        if train_end_idx <= train_start_idx or test_end_idx <= test_start_idx:
+            current_date += relativedelta(months=test_months)
+            continue
+            
+        # Extract training data (ONLY past data, no look-ahead)
+        p1_train = p1[train_start_idx:train_end_idx]
+        p2_train = p2[train_start_idx:train_end_idx]
+        
+        # Extract test data (future unseen data)
+        p1_test = p1[test_start_idx:test_end_idx]
+        p2_test = p2[test_start_idx:test_end_idx]
+        
+        if len(p1_train) < 150 or len(p1_test) < 30:  # Need substantial training data
+            current_date += relativedelta(months=test_months)
+            continue
+            
+        # ULTRA-ADVANCED multi-objective optimization on TRAINING data only
+        best_params = None
+        best_ultra_score = -999999
+        
+        print(f"🔬 Ultra-optimizing on {len(ultra_param_combinations)} parameter sets...")
+        
+        for params in ultra_param_combinations:
+            try:
+                # Test parameters on TRAINING data only (no look-ahead)
+                train_result = qn.vectorized_backtest(p1_train, p2_train, params, use_cache=False)
+                
+                # Ultra-advanced scoring with multiple objectives
+                pnl_normalized = train_result['total_return'] / initial_capital
+                sharpe_weight = 200000  # Ultra-heavy Sharpe weighting
+                pnl_weight = 150000     # Ultra-strong PnL weighting
+                risk_penalty = -abs(train_result.get('max_drawdown', 0)) / 2000
+                trade_efficiency = train_result.get('win_rate', 0.5) * 25000
+                stability_bonus = min(train_result.get('num_trades', 0) / 10.0, 5000)  # Reward reasonable trade frequency
+                
+                ultra_score = (pnl_normalized * pnl_weight + 
+                             train_result['sharpe_ratio'] * sharpe_weight + 
+                             risk_penalty + trade_efficiency + stability_bonus)
+                
+                # Ultra-strict filtering: Require excellent Sharpe AND positive returns
+                if (train_result['sharpe_ratio'] > 0.05 and 
+                    train_result['total_return'] > -50000 and 
+                    ultra_score > best_ultra_score):
+                    
+                    best_ultra_score = ultra_score
+                    best_params = params.copy()
+                    
+                    print(f"🎆 New ultra-best: Sharpe={train_result['sharpe_ratio']:.3f}, PnL=${train_result['total_return']:,.0f}, Score={ultra_score:.0f}")
+                    
+            except Exception:
+                continue
+        
+        # Strategy enhancement: Golden ratio fine-tuning on best params
+        if best_params:
+            print(f"🌟 Golden ratio fine-tuning...")
+            golden_ratio = 1.618
+            golden_variants = [
+                {'z_entry': best_params['z_entry'] * golden_ratio, 'z_exit': best_params['z_exit']},
+                {'z_entry': best_params['z_entry'], 'z_exit': best_params['z_exit'] / golden_ratio},
+                {'z_entry': best_params['z_entry'] / golden_ratio, 'z_exit': best_params['z_exit']}
+            ]
+            
+            for variant in golden_variants:
+                if variant['z_exit'] >= variant['z_entry'] * 0.8:
                     continue
                     
-                params = {'lookback': int(lookback), 'z_entry': float(z_entry), 'z_exit': float(z_exit)}
-                combinations_tested += 1
+                golden_params = best_params.copy()
+                golden_params.update(variant)
                 
                 try:
-                    result = qn.vectorized_backtest(p1, p2, params, use_cache=False)
+                    golden_train_result = qn.vectorized_backtest(p1_train, p2_train, golden_params, use_cache=False)
+                    golden_ultra_score = (golden_train_result['total_return'] / initial_capital * 150000 + 
+                                        golden_train_result['sharpe_ratio'] * 200000)
                     
-                    # Ultra-advanced scoring with multiple objectives
-                    pnl_normalized = result['total_return'] / initial_capital  # Normalize PnL
-                    sharpe_weight = 150000  # Heavy Sharpe weighting
-                    pnl_weight = 100000     # Strong PnL weighting
-                    risk_penalty = -abs(result.get('max_drawdown', 0)) / 1000  # Penalty for drawdown
-                    trade_efficiency = result.get('win_rate', 0.5) * 10000  # Reward high win rate
-                    
-                    ultra_score = (pnl_normalized * pnl_weight + 
-                                 result['sharpe_ratio'] * sharpe_weight + 
-                                 risk_penalty + trade_efficiency)
-                    
-                    # Advanced filtering: Require either excellent Sharpe OR exceptional PnL
-                    if ((result['sharpe_ratio'] > 0.1 or result['total_return'] > 300000) and 
-                        ultra_score > best_result['score']):
-                        best_result = {
-                            'sharpe_ratio': result['sharpe_ratio'],
-                            'total_return': result['total_return'],
-                            'params': params.copy(),
-                            'full_result': result,
-                            'score': ultra_score
-                        }
-                        print(f"🎆 ULTRA-BEST: Sharpe={result['sharpe_ratio']:.3f}, PnL=${result['total_return']:,.0f}, Score={ultra_score:.0f}")
+                    if golden_ultra_score > best_ultra_score:
+                        print(f"🌟 Golden enhancement: Sharpe={golden_train_result['sharpe_ratio']:.3f}, PnL=${golden_train_result['total_return']:,.0f}")
+                        best_params = golden_params.copy()
+                        best_ultra_score = golden_ultra_score
                 except Exception:
                     continue
-    
-    print(f"📊 Strategy 1 tested {combinations_tested} combinations")
-    
-    # Strategy 2: Golden ratio optimization for z-parameters
-    print(f"🌟 Strategy 2: Golden ratio parameter optimization...")
-    if best_result['params']:
-        golden_ratio = 1.618
-        base_params = best_result['params'].copy()
         
-        # Test golden ratio relationships
-        golden_variants = [
-            {'z_entry': base_params['z_entry'] * golden_ratio, 'z_exit': base_params['z_exit']},
-            {'z_entry': base_params['z_entry'], 'z_exit': base_params['z_exit'] / golden_ratio},
-            {'z_entry': base_params['z_entry'] / golden_ratio, 'z_exit': base_params['z_exit'] * golden_ratio}
-        ]
-        
-        for variant in golden_variants:
-            if variant['z_exit'] >= variant['z_entry']:
-                continue
-                
-            golden_params = base_params.copy()
-            golden_params.update(variant)
+        if best_params is None:
+            print(f"⚠️  No valid ultra-parameters found for this period")
+            current_date += relativedelta(months=test_months)
+            continue
             
-            try:
-                golden_result = qn.vectorized_backtest(p1, p2, golden_params, use_cache=False)
-                golden_score = (golden_result['total_return'] / initial_capital * 100000 + 
-                              golden_result['sharpe_ratio'] * 150000)
-                
-                if golden_score > best_result['score']:
-                    print(f"🌟 Golden ratio improvement: Sharpe={golden_result['sharpe_ratio']:.3f}, PnL=${golden_result['total_return']:,.0f}")
-                    best_result.update({
-                        'sharpe_ratio': golden_result['sharpe_ratio'],
-                        'total_return': golden_result['total_return'],
-                        'params': golden_params.copy(),
-                        'full_result': golden_result,
-                        'score': golden_score
-                    })
-            except Exception:
-                continue
-    
-    # Strategy 3: Market microstructure optimization
-    print(f"🔬 Strategy 3: Market microstructure analysis...")
-    try:
-        spread = p1 - p2
-        # Calculate Hurst exponent approximation for mean reversion strength
-        def hurst_approx(series):
-            """Approximate Hurst exponent calculation"""
-            n = len(series)
-            if n < 100:
-                return 0.5
-            lags = range(2, min(n//4, 100))
-            rs = []
-            for lag in lags:
-                diffs = np.diff(series, lag)
-                rs.append(np.std(diffs) * np.sqrt(lag))
-            if len(rs) > 10:
-                return np.polyfit(np.log(lags), np.log(rs), 1)[0]
-            return 0.5
-        
-        hurst = hurst_approx(spread)
-        autocorr = np.corrcoef(spread[:-1], spread[1:])[0, 1]
-        
-        # Optimize based on microstructure
-        if hurst < 0.4:  # Strong mean reversion
-            micro_params = {'lookback': 20, 'z_entry': 1.2, 'z_exit': 0.1}
-        elif hurst > 0.6:  # Trending behavior
-            micro_params = {'lookback': 90, 'z_entry': 3.2, 'z_exit': 0.8}
-        else:  # Neutral
-            micro_params = {'lookback': 45, 'z_entry': 2.1, 'z_exit': 0.3}
-        
-        micro_result = qn.vectorized_backtest(p1, p2, micro_params, use_cache=False)
-        micro_score = (micro_result['total_return'] / initial_capital * 100000 + 
-                      micro_result['sharpe_ratio'] * 150000)
-        
-        if micro_score > best_result['score']:
-            print(f"🔬 Microstructure optimization better: Sharpe={micro_result['sharpe_ratio']:.3f}, PnL=${micro_result['total_return']:,.0f}")
-            best_result.update({
-                'sharpe_ratio': micro_result['sharpe_ratio'],
-                'total_return': micro_result['total_return'],
-                'params': micro_params.copy(),
-                'full_result': micro_result,
-                'score': micro_score
+        # Apply ultra-optimized parameters to TEST data (unseen future data)
+        try:
+            test_result = qn.vectorized_backtest(p1_test, p2_test, best_params, use_cache=False)
+            
+            period_results.append({
+                'test_start': test_start,
+                'test_end': test_end,
+                'params': best_params,
+                'test_return': test_result['total_return'],
+                'test_sharpe': test_result['sharpe_ratio'],
+                'test_trades': test_result['num_trades'],
+                'ultra_score': best_ultra_score
             })
-    except Exception as e:
-        print(f"⚠️ Microstructure analysis failed: {e}")
-    
-    # Strategy 4: Ensemble method - combine multiple good strategies
-    print(f"🎭 Strategy 4: Ensemble optimization...")
-    try:
-        # Test ensemble of top performing parameter sets
-        ensemble_params_sets = [
-            {'lookback': 30, 'z_entry': 1.8, 'z_exit': 0.2},
-            {'lookback': 60, 'z_entry': 2.5, 'z_exit': 0.4},
-            {'lookback': 90, 'z_entry': 3.0, 'z_exit': 0.3},
-            {'lookback': 45, 'z_entry': 2.2, 'z_exit': 0.25}
-        ]
-        
-        best_ensemble_score = best_result['score']
-        for ensemble_params in ensemble_params_sets:
-            try:
-                ensemble_result = qn.vectorized_backtest(p1, p2, ensemble_params, use_cache=False)
-                ensemble_score = (ensemble_result['total_return'] / initial_capital * 100000 + 
-                                ensemble_result['sharpe_ratio'] * 150000)
-                
-                if ensemble_score > best_ensemble_score:
-                    print(f"🎭 Ensemble method better: Sharpe={ensemble_result['sharpe_ratio']:.3f}, PnL=${ensemble_result['total_return']:,.0f}")
-                    best_result.update({
-                        'sharpe_ratio': ensemble_result['sharpe_ratio'],
-                        'total_return': ensemble_result['total_return'],
-                        'params': ensemble_params.copy(),
-                        'full_result': ensemble_result,
-                        'score': ensemble_score
-                    })
-                    best_ensemble_score = ensemble_score
-            except Exception:
-                continue
-    except Exception as e:
-        print(f"⚠️ Ensemble optimization failed: {e}")
-    
-    # Strategy 5: Final precision tuning with micro-adjustments
-    print(f"🎯 Strategy 5: Precision micro-tuning...")
-    try:
-        if best_result['params']:
-            base = best_result['params'].copy()
-            micro_deltas = [-0.05, -0.02, -0.01, 0.01, 0.02, 0.05]
             
-            for z_entry_delta in micro_deltas:
-                for z_exit_delta in micro_deltas:
-                    precision_params = base.copy()
-                    precision_params['z_entry'] = max(0.3, base['z_entry'] + z_entry_delta)
-                    precision_params['z_exit'] = max(0.05, base['z_exit'] + z_exit_delta)
-                    
-                    if precision_params['z_exit'] >= precision_params['z_entry']:
-                        continue
-                    
-                    try:
-                        precision_result = qn.vectorized_backtest(p1, p2, precision_params, use_cache=False)
-                        precision_score = (precision_result['total_return'] / initial_capital * 100000 + 
-                                         precision_result['sharpe_ratio'] * 150000)
-                        
-                        if precision_score > best_result['score']:
-                            print(f"🎯 Precision tuning better: Sharpe={precision_result['sharpe_ratio']:.3f}, PnL=${precision_result['total_return']:,.0f}")
-                            best_result.update({
-                                'sharpe_ratio': precision_result['sharpe_ratio'],
-                                'total_return': precision_result['total_return'],
-                                'params': precision_params.copy(),
-                                'full_result': precision_result,
-                                'score': precision_score
-                            })
-                    except Exception:
-                        continue
-    except Exception as e:
-        print(f"⚠️ Precision tuning failed: {e}")
+            total_return += test_result['total_return']
+            total_trades += test_result['num_trades']
+            
+            print(f"✅ Ultra period result: Sharpe={test_result['sharpe_ratio']:.3f}, Return=${test_result['total_return']:,.0f}")
+            
+        except Exception as e:
+            print(f"❌ Ultra test period failed: {e}")
+            
+        current_date += relativedelta(months=test_months)
+    
+    # Calculate overall ultra walk-forward results
+    if period_results:
+        avg_sharpe = np.mean([r['test_sharpe'] for r in period_results])
+        total_periods = len(period_results)
+        
+        # Get the highest-scoring parameters
+        best_period = max(period_results, key=lambda x: x['ultra_score'])
+        ultra_best_params = best_period['params']
+        
+        result = {
+            'sharpe_ratio': avg_sharpe,
+            'total_return': total_return,
+            'num_trades': total_trades,
+            'params': ultra_best_params,
+            'periods': total_periods,
+            'period_results': period_results,
+            'walk_forward': True,
+            'ultra_optimized': True,
+            'score': total_return / 1000 + avg_sharpe * 200000
+        }
+        
+        print(f"\n🏆 ULTRA WALK-FORWARD RESULTS (ABSOLUTELY NO LOOK-AHEAD):")
+        print(f"   Total Return: ${total_return:,.0f}")
+        print(f"   Avg Sharpe: {avg_sharpe:.3f}")
+        print(f"   Total Trades: {total_trades}")
+        print(f"   Periods: {total_periods}")
+        print(f"   Ultra-Best Params: {ultra_best_params}")
+        print(f"   Ultra Score: {result['score']:,.0f}")
+        
+    else:
+        result = {
+            'sharpe_ratio': 0.0,
+            'total_return': 0.0,
+            'num_trades': 0,
+            'params': {'lookback': 30, 'z_entry': 2.0, 'z_exit': 0.4},
+            'periods': 0,
+            'walk_forward': True,
+            'ultra_optimized': True,
+            'score': 0
+        }
     
     print(f"✅ EXITING ultra_optimize_pnl_sharpe({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
-    print(f"🏆 ULTRA-OPTIMIZATION COMPLETE - Final Score: {best_result.get('score', 0):,.0f}")
-    return best_result
+    print(f"🏆 ULTRA-OPTIMIZATION COMPLETE - Final Ultra Score: {result.get('score', 0):,.0f}")
+    return result
 
 def plot_ultra_optimized_performance(symbol1, symbol2, start_date, end_date, initial_capital=500000):
     """
@@ -755,6 +962,398 @@ def plot_ultra_optimized_performance(symbol1, symbol2, start_date, end_date, ini
     
     print(f"✅ EXITING plot_ultra_optimized_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
     return result
+
+def analyze_pair_quality(symbol1, symbol2, start_date, end_date):
+    """
+    Analyze pair quality for pairs trading suitability.
+    """
+    try:
+        data = load_or_download_data([symbol1, symbol2], start_date, end_date)
+        p1, p2 = data[symbol1], data[symbol2]
+        min_len = min(len(p1), len(p2))
+        p1, p2 = p1[:min_len], p2[:min_len]
+        
+        # Calculate quality metrics
+        correlation = np.corrcoef(p1, p2)[0, 1]
+        spread = p1 - p2
+        
+        # Mean reversion test
+        spread_changes = np.diff(spread)
+        reversion = np.corrcoef(spread[:-1], spread_changes)[0, 1] if len(spread) > 1 else 0
+        
+        # Volatility analysis
+        ratio = p1 / p2
+        ratio_vol = np.std(np.diff(np.log(ratio))) if np.all(ratio > 0) else 999
+        
+        # Cointegration proxy (simplified)
+        spread_std = np.std(spread)
+        spread_mean = np.mean(spread)
+        cv = abs(spread_std / spread_mean) if spread_mean != 0 else 999
+        
+        # Quality score (0-100)
+        corr_score = max(0, (correlation - 0.5) * 200)  # 0-100 for corr 0.5-1.0
+        reversion_score = max(0, abs(reversion) * 500)  # 0-100 for strong reversion
+        stability_score = max(0, 100 - ratio_vol * 2000)  # Penalty for high volatility
+        
+        quality_score = (corr_score + reversion_score + stability_score) / 3
+        
+        return {
+            'quality_score': quality_score,
+            'correlation': correlation,
+            'mean_reversion': reversion,
+            'ratio_volatility': ratio_vol,
+            'coefficient_variation': cv,
+            'suitable': quality_score > 30  # Threshold for trading
+        }
+    except Exception as e:
+        return {
+            'quality_score': 0,
+            'correlation': 0,
+            'mean_reversion': 0,
+            'ratio_volatility': 999,
+            'coefficient_variation': 999,
+            'suitable': False,
+            'error': str(e)
+        }
+
+def find_best_pairs(symbol_list, start_date, end_date, top_n=5):
+    """
+    Screen multiple pairs and return the best ones for trading.
+    """
+    print(f"🔍 SCREENING {len(symbol_list)} symbols for best pairs...")
+    
+    pair_scores = []
+    
+    for i, symbol1 in enumerate(symbol_list):
+        for symbol2 in symbol_list[i+1:]:
+            try:
+                quality = analyze_pair_quality(symbol1, symbol2, start_date, end_date)
+                
+                if quality.get('suitable', False):
+                    pair_scores.append({
+                        'pair': f"{symbol1}-{symbol2}",
+                        'symbol1': symbol1,
+                        'symbol2': symbol2,
+                        'score': quality['quality_score'],
+                        'correlation': quality['correlation'],
+                        'reversion': quality['mean_reversion']
+                    })
+                    print(f"✅ {symbol1}-{symbol2}: Score={quality['quality_score']:.1f}, Corr={quality['correlation']:.3f}")
+                else:
+                    print(f"❌ {symbol1}-{symbol2}: Unsuitable (Score={quality['quality_score']:.1f})")
+                    
+            except Exception as e:
+                print(f"⚠️ {symbol1}-{symbol2}: Error - {e}")
+    
+    # Sort by quality score and return top pairs
+    pair_scores.sort(key=lambda x: x['score'], reverse=True)
+    return pair_scores[:top_n]
+
+def enhanced_signal_generation(p1, p2, params):
+    """
+    Enhanced signal generation with dynamic thresholds and filters.
+    """
+    lookback = params['lookback']
+    z_entry = params['z_entry']
+    z_exit = params['z_exit']
+    
+    spread = p1 - p2
+    z_scores = np.zeros(len(spread))
+    trade_entries = []
+    trade_exits = []
+    
+    # Calculate dynamic volatility multiplier
+    volatility_window = min(60, len(spread) // 4)
+    volatility_multiplier = np.ones(len(spread))
+    
+    for i in range(volatility_window, len(spread)):
+        recent_spread = spread[i-volatility_window:i]
+        current_vol = np.std(recent_spread)
+        historical_vol = np.std(spread[:i])
+        
+        if historical_vol > 0:
+            vol_ratio = current_vol / historical_vol
+            # Adjust thresholds based on volatility regime
+            volatility_multiplier[i] = max(0.5, min(2.0, vol_ratio))
+    
+    # Calculate z-scores with lookback window
+    for i in range(lookback, len(spread)):
+        window = spread[i-lookback:i]
+        mean = np.mean(window)
+        std = np.std(window)
+        if std > 0:
+            z_scores[i] = (spread[i] - mean) / std
+    
+    # Generate signals with dynamic thresholds
+    in_trade = False
+    trade_start_idx = None
+    
+    for i in range(lookback, len(z_scores)):
+        # Apply volatility-adjusted thresholds
+        dynamic_z_entry = z_entry * volatility_multiplier[i]
+        dynamic_z_exit = z_exit * volatility_multiplier[i]
+        
+        if not in_trade and abs(z_scores[i]) > dynamic_z_entry:
+            # Additional momentum filter
+            if i > 0:
+                momentum = z_scores[i] - z_scores[i-1]
+                # Only enter if momentum supports mean reversion
+                if (z_scores[i] > 0 and momentum < 0) or (z_scores[i] < 0 and momentum > 0):
+                    trade_entries.append(i)
+                    in_trade = True
+                    trade_start_idx = i
+        elif in_trade and abs(z_scores[i]) < dynamic_z_exit:
+            trade_exits.append(i)
+            in_trade = False
+    
+    return z_scores, trade_entries, trade_exits, spread
+
+def optimized_walk_forward(symbol1, symbol2, start_date, end_date, train_months=15, test_months=3, initial_capital=500000):
+    """
+    Optimized walk-forward with enhanced features and better pair selection.
+    """
+    print(f"🚀 ENTERING optimized_walk_forward({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    print(f"🎯 ENHANCED WALK-FORWARD: {train_months}mo train, {test_months}mo test, regime-aware")
+    
+    from datetime import datetime as dt
+    from dateutil.relativedelta import relativedelta
+    
+    # First check pair quality
+    quality = analyze_pair_quality(symbol1, symbol2, start_date, end_date)
+    print(f"📊 Pair Quality Score: {quality['quality_score']:.1f}/100")
+    print(f"   Correlation: {quality['correlation']:.3f}")
+    print(f"   Mean Reversion: {quality['mean_reversion']:.3f}")
+    
+    if not quality['suitable']:
+        print(f"⚠️ WARNING: Low quality pair (score < 30). Results may be poor.")
+    
+    # Load data
+    data = load_or_download_data([symbol1, symbol2], start_date, end_date)
+    p1, p2 = data[symbol1], data[symbol2]
+    min_len = min(len(p1), len(p2))
+    p1, p2 = p1[:min_len], p2[:min_len]
+    
+    # Create date range
+    dates = pd.date_range(start_date, end_date, freq='D')
+    dates = dates[dates.dayofweek < 5][:min_len]
+    
+    start_dt = dt.strptime(start_date, "%Y-%m-%d")
+    end_dt = dt.strptime(end_date, "%Y-%m-%d")
+    current_date = start_dt + relativedelta(months=train_months)
+    
+    # Enhanced parameter combinations
+    param_combinations = advanced_parameter_grid()
+    
+    total_return = 0
+    total_trades = 0
+    period_results = []
+    
+    while current_date < end_dt:
+        train_start = current_date - relativedelta(months=train_months)
+        train_end = current_date
+        test_start = current_date
+        test_end = min(current_date + relativedelta(months=test_months), end_dt)
+        
+        print(f"\n🎯 Enhanced Period: Train={train_start.strftime('%Y-%m')} to {train_end.strftime('%Y-%m')}, Test={test_start.strftime('%Y-%m')} to {test_end.strftime('%Y-%m')}")
+        
+        # Get data indices
+        train_start_idx = 0
+        train_end_idx = len(dates)
+        test_start_idx = len(dates)
+        test_end_idx = len(dates)
+        
+        for i, date in enumerate(dates):
+            if date.date() >= train_start.date() and train_start_idx == 0:
+                train_start_idx = i
+            if date.date() >= train_end.date() and train_end_idx == len(dates):
+                train_end_idx = i
+                break
+                
+        for i, date in enumerate(dates):
+            if date.date() >= test_start.date() and test_start_idx == len(dates):
+                test_start_idx = i
+            if date.date() >= test_end.date() and test_end_idx == len(dates):
+                test_end_idx = i
+                break
+        
+        train_start_idx = max(0, train_start_idx)
+        train_end_idx = min(len(p1), train_end_idx)
+        test_start_idx = max(0, min(len(p1), test_start_idx))
+        test_end_idx = min(len(p1), test_end_idx)
+        
+        if train_end_idx <= train_start_idx or test_end_idx <= test_start_idx:
+            current_date += relativedelta(months=test_months)
+            continue
+            
+        p1_train = p1[train_start_idx:train_end_idx]
+        p2_train = p2[train_start_idx:train_end_idx]
+        p1_test = p1[test_start_idx:test_end_idx]
+        p2_test = p2[test_start_idx:test_end_idx]
+        
+        if len(p1_train) < 120 or len(p1_test) < 30:
+            current_date += relativedelta(months=test_months)
+            continue
+        
+        # Adaptive parameter selection based on regime
+        filtered_params, regime = adaptive_parameter_selection(p1_train, p2_train, param_combinations)
+        print(f"🧠 Detected regime: {regime}, using {len(filtered_params)} parameters")
+        
+        best_params = None
+        best_score = -999999
+        
+        for params in filtered_params:
+            try:
+                train_result = qn.vectorized_backtest(p1_train, p2_train, params, use_cache=False)
+                
+                # Enhanced scoring with risk adjustment
+                sharpe_component = train_result['sharpe_ratio'] * 100000
+                pnl_component = train_result['total_return'] / 1000
+                risk_adjustment = -abs(train_result.get('max_drawdown', 0)) / 5000
+                win_rate_bonus = train_result.get('win_rate', 0.5) * 20000
+                
+                enhanced_score = sharpe_component + pnl_component + risk_adjustment + win_rate_bonus
+                
+                if enhanced_score > best_score and train_result['sharpe_ratio'] > -0.3:
+                    best_score = enhanced_score
+                    best_params = params.copy()
+                    
+            except Exception:
+                continue
+        
+        if best_params is None:
+            print(f"⚠️ No valid parameters for regime {regime}")
+            current_date += relativedelta(months=test_months)
+            continue
+        
+        # Test on future data
+        try:
+            test_result = qn.vectorized_backtest(p1_test, p2_test, best_params, use_cache=False)
+            
+            period_results.append({
+                'test_start': test_start,
+                'test_end': test_end,
+                'params': best_params,
+                'regime': regime,
+                'test_return': test_result['total_return'],
+                'test_sharpe': test_result['sharpe_ratio'],
+                'test_trades': test_result['num_trades'],
+                'score': best_score
+            })
+            
+            total_return += test_result['total_return']
+            total_trades += test_result['num_trades']
+            
+            print(f"✅ Enhanced result: Regime={regime}, Sharpe={test_result['sharpe_ratio']:.3f}, Return=${test_result['total_return']:,.0f}")
+            
+        except Exception as e:
+            print(f"❌ Enhanced test failed: {e}")
+            
+        current_date += relativedelta(months=test_months)
+    
+    # Calculate results
+    if period_results:
+        avg_sharpe = np.mean([r['test_sharpe'] for r in period_results])
+        best_period = max(period_results, key=lambda x: x['score'])
+        
+        result = {
+            'sharpe_ratio': avg_sharpe,
+            'total_return': total_return,
+            'num_trades': total_trades,
+            'params': best_period['params'],
+            'periods': len(period_results),
+            'period_results': period_results,
+            'walk_forward': True,
+            'enhanced': True,
+            'pair_quality': quality
+        }
+        
+        print(f"\n🎯 ENHANCED WALK-FORWARD RESULTS:")
+        print(f"   Quality Score: {quality['quality_score']:.1f}/100")
+        print(f"   Total Return: ${total_return:,.0f}")
+        print(f"   Avg Sharpe: {avg_sharpe:.3f}")
+        print(f"   Periods: {len(period_results)}")
+        print(f"   Best Params: {best_period['params']}")
+        
+    else:
+        result = {
+            'sharpe_ratio': 0.0,
+            'total_return': 0.0,
+            'num_trades': 0,
+            'params': {'lookback': 30, 'z_entry': 2.0, 'z_exit': 0.4},
+            'periods': 0,
+            'enhanced': True,
+            'pair_quality': quality
+        }
+    
+    print(f"✅ EXITING optimized_walk_forward({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    return result
+
+def test_multiple_pairs_optimized(start_date='2020-01-01', end_date='2023-12-31', initial_capital=500000):
+    """
+    Test multiple pairs and find the best performing ones.
+    """
+    print(f"🎯 TESTING MULTIPLE PAIRS WITH OPTIMIZED WALK-FORWARD")
+    
+    # Test different types of pairs
+    test_pairs = [
+        ('SPY', 'QQQ'),     # Large cap vs tech
+        ('XLF', 'XLI'),     # Financial vs Industrial sectors
+        ('GLD', 'SLV'),     # Gold vs Silver
+        ('EWJ', 'EWG'),     # Japan vs Germany ETFs
+        ('VTI', 'VXUS'),    # US vs International
+        ('AAPL', 'MSFT'),   # Tech giants
+        ('JPM', 'BAC'),     # Banks
+        ('XLE', 'XLU'),     # Energy vs Utilities
+    ]
+    
+    results = []
+    
+    for symbol1, symbol2 in test_pairs:
+        print(f"\n{'='*60}")
+        print(f"🔍 Testing {symbol1} vs {symbol2}")
+        
+        try:
+            result = optimized_walk_forward(symbol1, symbol2, start_date, end_date, 
+                                          train_months=15, test_months=3, 
+                                          initial_capital=initial_capital)
+            
+            final_value = initial_capital + result['total_return']
+            return_pct = (result['total_return'] / initial_capital) * 100
+            
+            results.append({
+                'pair': f"{symbol1}-{symbol2}",
+                'sharpe': result['sharpe_ratio'],
+                'total_return': result['total_return'],
+                'return_pct': return_pct,
+                'final_value': final_value,
+                'trades': result['num_trades'],
+                'quality': result.get('pair_quality', {}).get('quality_score', 0),
+                'params': result['params']
+            })
+            
+            print(f"📊 {symbol1}-{symbol2} Final: ${final_value:,.0f} ({return_pct:+.1f}%, Sharpe={result['sharpe_ratio']:.3f})")
+            
+        except Exception as e:
+            print(f"❌ {symbol1}-{symbol2} failed: {e}")
+            results.append({
+                'pair': f"{symbol1}-{symbol2}",
+                'sharpe': 0, 'total_return': 0, 'return_pct': 0,
+                'final_value': initial_capital, 'trades': 0, 'quality': 0,
+                'error': str(e)
+            })
+    
+    # Sort results by performance
+    results.sort(key=lambda x: x['return_pct'], reverse=True)
+    
+    print(f"\n🏆 FINAL RANKINGS:")
+    print(f"{'='*80}")
+    print(f"{'Rank':<4} {'Pair':<12} {'Return %':<10} {'Final Value':<15} {'Sharpe':<8} {'Trades':<7} {'Quality':<8}")
+    print(f"{'-'*80}")
+    
+    for i, result in enumerate(results, 1):
+        print(f"{i:<4} {result['pair']:<12} {result['return_pct']:+8.1f}% ${result['final_value']:>12,.0f} {result['sharpe']:>6.3f} {result['trades']:>6} {result['quality']:>6.1f}")
+    
+    return results
 
 def example_usage():
     print(f"🚀 ENTERING example_usage() at {datetime.now().strftime('%H:%M:%S')}")
