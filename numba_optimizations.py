@@ -8,6 +8,7 @@ import math
 from typing import Tuple
 import warnings
 import matplotlib.pyplot as plt
+from datetime import datetime
 warnings.filterwarnings('ignore')
 LOW_VOL_THRESHOLD = 15.0
 NORMAL_VOL_THRESHOLD = 25.0
@@ -266,6 +267,7 @@ class NanoOptimizedAnalyzer:
         return {'pair': pair_name, 'symbols': (symbol1, symbol2), 'results': {'total_return': total_return, 'sharpe_ratio': sharpe_ratio, 'num_trades': num_trades, 'win_rate': win_rate, 'correlation': correlation, 'regime': 'low_vol' if vix < LOW_VOL_THRESHOLD else ('normal_vol' if vix < NORMAL_VOL_THRESHOLD else 'high_vol'), 'vix_level': vix, 'position_weight': position_weight, 'avg_test_sharpe': avg_test, 'stability_score': stability, 'num_features': len(features)}, 'performance': {'total_ns': total_time, 'total_us': total_time / 1000, 'total_ms': total_time / 1_000_000, 'breakdown_ns': {'alignment': align_time, 'features': feature_time, 'ensemble': ensemble_time, 'regime': regime_time, 'correlation': corr_time, 'sizing': sizing_time, 'walk_forward': wf_time, 'optimization': opt_time}, 'cache_hits': {'regime': regime_from_cache, 'correlation': corr_from_cache}, 'features_per_ns': len(features) / max(total_time, 1), 'features_per_second': len(features) * 1_000_000_000 // max(total_time, 1), 'throughput_mops': (len(features) * 5) / max(total_time / 1000, 1)}}
 
 def benchmark_nano_performance():
+    print(f"⚡ ENTERING benchmark_nano_performance() at {datetime.now().strftime('%H:%M:%S')}")
     n_points = 2000
     data1 = np.random.randn(n_points).astype(np.float64) * 100 + 1000
     data2 = np.random.randn(n_points).astype(np.float64) * 100 + 1000
@@ -282,9 +284,11 @@ def benchmark_nano_performance():
     breakdown_keys = ['alignment', 'features', 'ensemble', 'regime', 'correlation', 'sizing', 'walk_forward', 'optimization']
     cache_hits_regime = sum(1 for r in results if r['performance']['cache_hits']['regime'])
     cache_hits_corr = sum(1 for r in results if r['performance']['cache_hits']['correlation'])
+    print(f"✅ EXITING benchmark_nano_performance() at {datetime.now().strftime('%H:%M:%S')}")
     return results
 
 def plot_pair_portfolio(symbol1, symbol2, data1, data2, result):
+    print(f"📊 ENTERING plot_pair_portfolio({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
     n_points = min(len(data1), len(data2), 1000)
     spread = data1[:n_points] - data2[:n_points]
     portfolio_value = np.cumsum(np.random.normal(result['results']['total_return']/n_points, 10, n_points))
@@ -320,9 +324,11 @@ def plot_pair_portfolio(symbol1, symbol2, data1, data2, result):
     plt.tight_layout()
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     plt.close()
+    print(f"✅ EXITING plot_pair_portfolio({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
     return filename
 
 def run_ultra_fast_analysis():
+    print(f"🚀 ENTERING run_ultra_fast_analysis() at {datetime.now().strftime('%H:%M:%S')}")
     analyzer = NanoOptimizedAnalyzer()
     stocks = {'CRVL': 'CorVel Corp.', 'ORGO': 'Organogenesis Holdings Inc.', 'AXL': 'American Axle & Manufacturing Holdings Inc.', 'ARQQ': 'Arqit Quantum Inc.', 'AMX': 'America Movil S.A.B. de C.V.', 'GF': 'New Germany Fund Inc.', 'AHCO': 'AdaptHealth Corp.', 'HTCR': 'Heartcore Enterprises Inc.'}
     symbols = list(stocks.keys())
@@ -366,6 +372,7 @@ def run_ultra_fast_analysis():
         total_return = sum(r['results']['total_return'] for r in results)
         avg_sharpe = np.mean([r['results']['sharpe_ratio'] for r in results])
         avg_win_rate = np.mean([r['results']['win_rate'] for r in results])
+    print(f"✅ EXITING run_ultra_fast_analysis() at {datetime.now().strftime('%H:%M:%S')}")
     return results
 
 if __name__ == "__main__":

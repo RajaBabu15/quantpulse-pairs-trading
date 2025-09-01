@@ -6,6 +6,18 @@
 #include <numeric>
 #include <cmath>
 #include <omp.h>
+#include <chrono>
+#include <ctime>
+#include <cstdio>
+
+// Timing utility functions
+inline std::string get_current_time() {
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+    char buffer[9];
+    strftime(buffer, sizeof(buffer), "%H:%M:%S", std::localtime(&time));
+    return std::string(buffer);
+}>
 const size_t ThreadPool::hardware_threads = std::thread::hardware_concurrency();
 ThreadPool::ThreadPool(size_t threads) : stop(false) {
     size_t num_threads = (threads == 0) ? hardware_threads : std::min(threads, MAX_THREADS);
@@ -59,6 +71,7 @@ static void calculate_spread_vectorized(const PriceData& prices, int lookback, d
 }
 
 BacktestResult cpp_vectorized_backtest(const double* prices1, const double* prices2, size_t n, const TradingParameters& params) {
+    printf("🔄 ENTERING cpp_vectorized_backtest() at %s\n", get_current_time().c_str());
     BacktestResult result{0.0, 0.0, 0.0, 0.0, {}, 0};
     std::vector<double> spread(n), z_scores(n, 0.0);
     std::fill(z_scores.begin(), z_scores.begin() + params.lookback, 0.0);
@@ -132,6 +145,7 @@ BacktestResult cpp_vectorized_backtest(const double* prices1, const double* pric
         double std_return = simd::vectorized_std(result.trade_returns.data(), result.trade_returns.size(), mean_return);
         result.sharpe_ratio = (std_return > EPSILON) ? mean_return / std_return : 0.0;
     }
+    printf("✅ EXITING cpp_vectorized_backtest() at %s\n", get_current_time().c_str());
     return result;
 }
 
@@ -181,6 +195,7 @@ CVFoldResult evaluate_cv_fold_parallel(const PriceData& prices, const TradingPar
 }
 
 static double parallel_cross_validation_impl(const double* prices1, const double* prices2, size_t n, const double* param_array, int n_splits, double l1_ratio, double alpha, double kl_weight) {
+    printf("🔧 ENTERING parallel_cross_validation_impl() at %s\n", get_current_time().c_str());
     PriceData prices(n);
     std::copy(prices1, prices1 + n, prices.symbol1.begin());
     std::copy(prices2, prices2 + n, prices.symbol2.begin());
@@ -213,6 +228,7 @@ static double parallel_cross_validation_impl(const double* prices1, const double
     for(const auto& result : results) {
         total_score += result.objective_score;
     }
+    printf("✅ EXITING parallel_cross_validation_impl() at %s\n", get_current_time().c_str());
     return total_score / results.size();
 }
 

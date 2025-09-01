@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Tuple, Dict, Any, List, Optional
 import quantpulse_core_py as _core
+from datetime import datetime
 
 class QuantPulseNative:
     def __init__(self):
@@ -48,11 +49,22 @@ def is_native_available() -> bool:
     return _native.is_available
 
 def calculate_spread_and_zscore(prices1: np.ndarray, prices2: np.ndarray, lookback: int) -> Tuple[np.ndarray, np.ndarray]:
-    return _native.calculate_spread_and_zscore(prices1, prices2, lookback)
+    print(f"📊 ENTERING calculate_spread_and_zscore() at {datetime.now().strftime('%H:%M:%S')}")
+    result = _native.calculate_spread_and_zscore(prices1, prices2, lookback)
+    print(f"✅ EXITING calculate_spread_and_zscore() at {datetime.now().strftime('%H:%M:%S')}")
+    return result
+
 def vectorized_backtest(prices1: np.ndarray, prices2: np.ndarray, params: Dict[str, float], use_cache: bool = True) -> Dict[str, float]:
-    return _native.vectorized_backtest(prices1, prices2, params, use_cache)
+    print(f"🚀 ENTERING vectorized_backtest() at {datetime.now().strftime('%H:%M:%S')}")
+    result = _native.vectorized_backtest(prices1, prices2, params, use_cache)
+    print(f"✅ EXITING vectorized_backtest() at {datetime.now().strftime('%H:%M:%S')}")
+    return result
+
 def parallel_cross_validation(prices1: np.ndarray, prices2: np.ndarray, params: np.ndarray, n_folds: int = 3, l1_ratio: float = 0.7, alpha: float = 0.02, kl_weight: float = 0.15) -> float:
-    return _native.parallel_cross_validation(prices1, prices2, params, n_folds, l1_ratio, alpha, kl_weight)
+    print(f"🔄 ENTERING parallel_cross_validation() at {datetime.now().strftime('%H:%M:%S')}")
+    result = _native.parallel_cross_validation(prices1, prices2, params, n_folds, l1_ratio, alpha, kl_weight)
+    print(f"✅ EXITING parallel_cross_validation() at {datetime.now().strftime('%H:%M:%S')}")
+    return result
 
 class NativeRMSprop:
     def __init__(self, lr: float = 0.001, rho: float = 0.9, epsilon: float = 1e-8):
@@ -185,6 +197,7 @@ class NativeElasticNetKLOptimizer:
         score = self.native.parallel_cross_validation(prices1, prices2, denorm, n_folds=n_splits, l1_ratio=self.l1_ratio, alpha=self.alpha, kl_weight=self.kl_weight)
         return -float(score)
     def optimize(self, prices, n_splits: int = 3, max_iterations: int = 25):
+        print(f"🔧 ENTERING optimize() at {datetime.now().strftime('%H:%M:%S')}")
         p1, p2 = self._extract_arrays(prices)
         current = self._initial.copy()
         best = current.copy()
@@ -227,8 +240,10 @@ class NativeElasticNetKLOptimizer:
         # Validate final parameters
         self._validate_parameters(self.best_params)
         
+        print(f"✅ EXITING optimize() at {datetime.now().strftime('%H:%M:%S')}")
         return self.best_params
     def backtest(self, prices, use_cache: bool = True):
+        print(f"📊 ENTERING backtest() at {datetime.now().strftime('%H:%M:%S')}")
         if self.best_params is None:
             raise ValueError("Must run optimize() before backtest()")
         
@@ -250,10 +265,12 @@ class NativeElasticNetKLOptimizer:
             if 'sharpe_ratio' in result and abs(result.get('sharpe_ratio', 0)) > 10:
                 print(f"Warning: Suspiciously high Sharpe ratio: {result['sharpe_ratio']:.3f}")
                 
+            print(f"✅ EXITING backtest() at {datetime.now().strftime('%H:%M:%S')}")
             return result
             
         except Exception as e:
             print(f"Backtest failed: {str(e)}")
+            print(f"❌ EXITING backtest() with error at {datetime.now().strftime('%H:%M:%S')}")
             return {'total_return': float('nan'), 'sharpe_ratio': float('nan'), 'max_drawdown': float('nan'), 'num_trades': 0, 'error': str(e)}
 
 class NativeElasticNetKLPortfolioOptimizer:
@@ -263,6 +280,7 @@ class NativeElasticNetKLPortfolioOptimizer:
         self.kl_weight = kl_weight
         self.results = {}
     def optimize_all(self, pairs_data, n_splits: int = 3, max_iterations: int = 25):
+        print(f"🚀 ENTERING optimize_all() at {datetime.now().strftime('%H:%M:%S')}")
         import time
         failed_pairs = []
         
@@ -297,10 +315,12 @@ class NativeElasticNetKLPortfolioOptimizer:
             for pair, error in failed_pairs:
                 print(f"  - {pair}: {error}")
                 
+        print(f"✅ EXITING optimize_all() at {datetime.now().strftime('%H:%M:%S')}")
         return self.results
 def create_native_elasticnet_optimizer(symbol1: str, symbol2: str, l1_ratio: float = 0.7, alpha: float = 0.02, kl_weight: float = 0.15, optimization_mode: str = 'hybrid'):
     return NativeElasticNetKLOptimizer(symbol1, symbol2, l1_ratio, alpha, kl_weight, optimization_mode)
 def generate_native_performance_report(results, output_path: str = 'performance_report.json'):
+    print(f"📄 ENTERING generate_native_performance_report() at {datetime.now().strftime('%H:%M:%S')}")
     import json
     import numpy as np
     
@@ -357,4 +377,5 @@ def generate_native_performance_report(results, output_path: str = 'performance_
     except Exception as e:
         print(f"Failed to save report: {str(e)}")
     
+    print(f"✅ EXITING generate_native_performance_report() at {datetime.now().strftime('%H:%M:%S')}")
     return report

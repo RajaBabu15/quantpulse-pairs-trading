@@ -13,6 +13,16 @@
 #include <cstdint>
 #include <cstdio>
 #include <omp.h>
+#include <ctime>
+
+// Timing utility function
+inline std::string get_current_time() {
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+    char buffer[9];
+    strftime(buffer, sizeof(buffer), "%H:%M:%S", std::localtime(&time));
+    return std::string(buffer);
+}>
 BacktestResult cpp_vectorized_backtest(const double* prices1, const double* prices2, size_t n, const TradingParameters& params);
 template<typename K, typename V, typename Hash = std::hash<K>>
 class ThreadSafeLRUCache {
@@ -167,6 +177,7 @@ void cache_spread_stats(const double* prices1, const double* prices2, size_t n, 
     spread_cache.put(key, cache_data);
 }
 BacktestResult cpp_cached_vectorized_backtest(const double* prices1, const double* prices2, size_t n, const TradingParameters& params) {
+    printf("💾 ENTERING cpp_cached_vectorized_backtest() at %s\n", get_current_time().c_str());
     std::vector<double> key = {
         static_cast<double>(params.lookback), params.z_entry, params.z_exit,
         static_cast<double>(params.position_size), params.transaction_cost,
@@ -190,6 +201,7 @@ BacktestResult cpp_cached_vectorized_backtest(const double* prices1, const doubl
     }
     result = cpp_vectorized_backtest(prices1, prices2, n, params);
     backtest_cache.put(key, result);
+    printf("✅ EXITING cpp_cached_vectorized_backtest() at %s\n", get_current_time().c_str());
     return result;
 }
 

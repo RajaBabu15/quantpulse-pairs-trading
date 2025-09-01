@@ -56,6 +56,7 @@ def analyze_plot_semantics():
 
 def extract_trading_pairs_from_files():
     """Extract trading pairs analyzed from file names."""
+    print(f"🔍 ENTERING extract_trading_pairs_from_files() at {datetime.now().strftime('%H:%M:%S')}")
     plot_files = glob.glob("static/portfolio_performance_*.png")
     
     pairs = []
@@ -66,10 +67,12 @@ def extract_trading_pairs_from_files():
         if match:
             pairs.append((match.group(1), match.group(2)))
     
+    print(f"✅ EXITING extract_trading_pairs_from_files() at {datetime.now().strftime('%H:%M:%S')}")
     return pairs
 
 def create_semantic_summary_visualization():
     """Create comprehensive semantic summary of all generated visualizations."""
+    print(f"📊 ENTERING create_semantic_summary_visualization() at {datetime.now().strftime('%H:%M:%S')}")
     
     categories = analyze_plot_semantics()
     pairs = extract_trading_pairs_from_files()
@@ -241,6 +244,7 @@ def create_semantic_summary_visualization():
     plt.savefig('static/semantic_analysis_dashboard.png', dpi=300, bbox_inches='tight')
     plt.close()
     
+    print(f"✅ EXITING create_semantic_summary_visualization() at {datetime.now().strftime('%H:%M:%S')}")
     return categories, pairs, summary_data
 
 def create_trading_performance_matrix():

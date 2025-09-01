@@ -9,6 +9,7 @@ try:
 except ImportError:
     # Define fallback optimization function if optimize_ltotal is not available
     def optimize_single_pair(symbol1, symbol2, start_date, end_date, budget=50, restarts=1, popsize=12):
+        print(f"🔧 ENTERING optimize_single_pair({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
         # Simple fallback optimization using the native optimizer
         import numpy as np
         from portfolio_manager import load_or_download_data
@@ -25,11 +26,14 @@ except ImportError:
         best_params = optimizer.optimize((data1, data2), n_splits=2, max_iterations=10)
         backtest_result = optimizer.backtest((data1, data2))
         
-        return {
+        result = {
             'best_params': best_params,
             'backtest': backtest_result,
             'optimization_time': 0.1
         }
+        
+        print(f"✅ EXITING optimize_single_pair({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+        return result
 
 import warnings
 import time

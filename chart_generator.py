@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime
@@ -220,9 +222,9 @@ def plot_rolling_sharpe(ax, dates, portfolio_values):
 def calculate_advanced_metrics(result, initial_capital, start_date, end_date):
     print(f"🧮 ENTERING calculate_advanced_metrics() at {datetime.now().strftime('%H:%M:%S')}")
     total_return_pct = (result['total_return'] / initial_capital)
-    from datetime import datetime
-    start = datetime.strptime(start_date, "%Y-%m-%d")
-    end = datetime.strptime(end_date, "%Y-%m-%d")
+    from datetime import datetime as dt
+    start = dt.strptime(start_date, "%Y-%m-%d")
+    end = dt.strptime(end_date, "%Y-%m-%d")
     years = (end - start).days / 365.25
     annualized_return = ((1 + total_return_pct) ** (1/years)) - 1
     sortino_ratio = 0.0
@@ -243,67 +245,74 @@ def plot_portfolio_performance(symbol1="FEXDU", symbol2="BALY", start_date="2010
     print(f"\n🚀 ENTERING plot_portfolio_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
     print(f"📅 Period: {start_date} to {end_date} | Capital: ${initial_capital:,}")
     
-    print(f"📈 Getting optimal parameters...")
-    p1, p2, optimal_params = get_optimal_parameters(symbol1, symbol2, start_date, end_date, budget, restarts, popsize, custom_params, skip_optimization)
-    
-    # Align data lengths
-    min_len = min(len(p1), len(p2))
-    p1 = p1[:min_len]
-    p2 = p2[:min_len]
-    print(f"📊 Data aligned: {min_len} data points")
-    
-    print(f"⚡ Running vectorized backtest...")
-    result = qn.vectorized_backtest(p1, p2, optimal_params, use_cache=False)
-    print(f"📊 Backtest complete: Sharpe={result['sharpe_ratio']:.3f}, Return=${result['total_return']:,.0f}")
-    
-    print(f"📅 Creating date range and calculating signals...")
-    dates = pd.date_range(start_date, end_date, freq='D')
-    dates = dates[dates.dayofweek < 5][:min_len]
-    z_scores, trade_entries, trade_exits, spread = calculate_trade_signals(p1, p2, optimal_params)
-    portfolio_values = simulate_portfolio_evolution(initial_capital, result, trade_exits, dates)
-    print(f"🔄 Calculated {len(trade_entries)} entries and {len(trade_exits)} exits")
-    
-    print(f"🎨 Creating visualization with 7 subplots...")
-    fig = plt.figure(figsize=(20, 16))
-    gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
-    ax1 = fig.add_subplot(gs[0, :2])
-    ax2 = fig.add_subplot(gs[0, 2])
-    ax3 = fig.add_subplot(gs[1, :2])
-    ax4 = fig.add_subplot(gs[1, 2])
-    ax5 = fig.add_subplot(gs[2, 0])
-    ax6 = fig.add_subplot(gs[2, 1])
-    ax7 = fig.add_subplot(gs[2, 2])
-    fig.suptitle(f'QuantPulse Pairs Trading Analysis: {symbol1} vs {symbol2}\\n{start_date} to {end_date}\\nCapital: ${initial_capital:,} | NO LOOK-AHEAD BIAS', fontsize=16, fontweight='bold')
-    
-    print(f"📊 Plotting 1/7: Price comparison...")
-    plot_price_comparison(ax1, dates, p1, p2, symbol1, symbol2, trade_entries, trade_exits)
-    print(f"📊 Plotting 2/7: Z-score signals...")
-    plot_zscore_signal(ax2, dates, z_scores, optimal_params['z_entry'], optimal_params['z_exit'], trade_entries, trade_exits, optimal_params['lookback'])
-    print(f"📊 Plotting 3/7: Portfolio evolution...")
-    plot_portfolio_evolution(ax3, dates, portfolio_values, initial_capital, trade_exits)
-    print(f"📊 Plotting 4/7: Drawdown chart...")
-    plot_drawdown_chart(ax4, dates, portfolio_values)
-    print(f"📊 Plotting 5/7: Performance metrics...")
-    plot_performance_metrics(ax5, result, initial_capital)
-    print(f"📊 Plotting 6/7: Trade distribution...")
-    plot_trade_distribution(ax6, result)
-    print(f"📊 Plotting 7/7: Rolling Sharpe...")
-    plot_rolling_sharpe(ax7, dates, portfolio_values)
-    
-    plt.tight_layout()
-    import os
-    os.makedirs('static', exist_ok=True)
-    filename = f'static/portfolio_performance_{symbol1}_{symbol2}_{start_date}_{end_date}.png'
-    print(f"💾 Saving chart to: {filename}")
-    plt.savefig(filename, dpi=300, bbox_inches='tight')
-    plt.close()
-    
-    advanced_metrics = calculate_advanced_metrics(result, initial_capital, start_date, end_date)
-    print_performance_summary(symbol1, symbol2, start_date, end_date, initial_capital, result, optimal_params, advanced_metrics)
-    
-    print(f"✅ EXITING plot_portfolio_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
-    print(f"📈 Final Results: Sharpe={result['sharpe_ratio']:.3f} | Return=${result['total_return']:,.0f} | Trades={result['num_trades']}\n")
-    return result
+    try:
+        print(f"📈 Getting optimal parameters...")
+        p1, p2, optimal_params = get_optimal_parameters(symbol1, symbol2, start_date, end_date, budget, restarts, popsize, custom_params, skip_optimization)
+        
+        # Align data lengths
+        min_len = min(len(p1), len(p2))
+        p1 = p1[:min_len]
+        p2 = p2[:min_len]
+        print(f"📊 Data aligned: {min_len} data points")
+        
+        print(f"⚡ Running vectorized backtest...")
+        result = qn.vectorized_backtest(p1, p2, optimal_params, use_cache=False)
+        print(f"📊 Backtest complete: Sharpe={result['sharpe_ratio']:.3f}, Return=${result['total_return']:,.0f}")
+        
+        print(f"📅 Creating date range and calculating signals...")
+        dates = pd.date_range(start_date, end_date, freq='D')
+        dates = dates[dates.dayofweek < 5][:min_len]
+        z_scores, trade_entries, trade_exits, spread = calculate_trade_signals(p1, p2, optimal_params)
+        portfolio_values = simulate_portfolio_evolution(initial_capital, result, trade_exits, dates)
+        print(f"🔄 Calculated {len(trade_entries)} entries and {len(trade_exits)} exits")
+        
+        print(f"🎨 Creating visualization with 7 subplots...")
+        fig = plt.figure(figsize=(20, 16))
+        gs = fig.add_gridspec(3, 3, hspace=0.3, wspace=0.3)
+        ax1 = fig.add_subplot(gs[0, :2])
+        ax2 = fig.add_subplot(gs[0, 2])
+        ax3 = fig.add_subplot(gs[1, :2])
+        ax4 = fig.add_subplot(gs[1, 2])
+        ax5 = fig.add_subplot(gs[2, 0])
+        ax6 = fig.add_subplot(gs[2, 1])
+        ax7 = fig.add_subplot(gs[2, 2])
+        fig.suptitle(f'QuantPulse Pairs Trading Analysis: {symbol1} vs {symbol2}\n{start_date} to {end_date}\nCapital: ${initial_capital:,} | NO LOOK-AHEAD BIAS', fontsize=16, fontweight='bold')
+        
+        print(f"📊 Plotting 1/7: Price comparison...")
+        plot_price_comparison(ax1, dates, p1, p2, symbol1, symbol2, trade_entries, trade_exits)
+        print(f"📊 Plotting 2/7: Z-score signals...")
+        plot_zscore_signal(ax2, dates, z_scores, optimal_params['z_entry'], optimal_params['z_exit'], trade_entries, trade_exits, optimal_params['lookback'])
+        print(f"📊 Plotting 3/7: Portfolio evolution...")
+        plot_portfolio_evolution(ax3, dates, portfolio_values, initial_capital, trade_exits)
+        print(f"📊 Plotting 4/7: Drawdown chart...")
+        plot_drawdown_chart(ax4, dates, portfolio_values)
+        print(f"📊 Plotting 5/7: Performance metrics...")
+        plot_performance_metrics(ax5, result, initial_capital)
+        print(f"📊 Plotting 6/7: Trade distribution...")
+        plot_trade_distribution(ax6, result)
+        print(f"📊 Plotting 7/7: Rolling Sharpe...")
+        plot_rolling_sharpe(ax7, dates, portfolio_values)
+        
+        plt.tight_layout()
+        import os
+        os.makedirs('static', exist_ok=True)
+        filename = f'static/portfolio_performance_{symbol1}_{symbol2}_{start_date}_{end_date}.png'
+        print(f"💾 Saving chart to: {filename}")
+        plt.savefig(filename, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+        plt.close()
+        
+        advanced_metrics = calculate_advanced_metrics(result, initial_capital, start_date, end_date)
+        print_performance_summary(symbol1, symbol2, start_date, end_date, initial_capital, result, optimal_params, advanced_metrics)
+        
+        print(f"✅ EXITING plot_portfolio_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+        print(f"📈 Final Results: Sharpe={result['sharpe_ratio']:.3f} | Return=${result['total_return']:,.0f} | Trades={result['num_trades']}\n")
+        return result
+        
+    except Exception as e:
+        print(f"❌ ERROR in plot_portfolio_performance: {e}")
+        print(f"📊 Returning empty result dictionary")
+        return {'sharpe_ratio': 0.0, 'total_return': 0.0, 'num_trades': 0, 'win_rate': 0.0}
+
 def example_usage():
     print(f"🚀 ENTERING example_usage() at {datetime.now().strftime('%H:%M:%S')}")
     result1 = plot_portfolio_performance()
