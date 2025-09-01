@@ -129,6 +129,7 @@ def detect_market_regime(prices: np.ndarray, vix_proxy: np.ndarray = None) -> Di
     return {'regime': regime, 'vix_level': current_vix, 'z_multiplier': z_multiplier, 'lookback_multiplier': lookback_multiplier, 'volatility': volatility}
 
 def dynamic_position_sizing(pairs_correlations: Dict, max_htcr_exposure: float = 0.3) -> Dict:
+    print(f"⚖️ ENTERING dynamic_position_sizing() at {datetime.now().strftime('%H:%M:%S')}")
     correlations = {}
     htcr_pairs = []
     for pair_name, corr_value in pairs_correlations.items():
@@ -141,9 +142,13 @@ def dynamic_position_sizing(pairs_correlations: Dict, max_htcr_exposure: float =
             position_weights[pair_name] = min(htcr_weight_limit, 0.15)
         else:
             position_weights[pair_name] = 0.2
-    return {'position_weights': position_weights, 'htcr_exposure': sum(w for p, w in position_weights.items() if 'HTCR' in p), 'max_single_position': max(position_weights.values())}
+    
+    result = {'position_weights': position_weights, 'htcr_exposure': sum(w for p, w in position_weights.items() if 'HTCR' in p), 'max_single_position': max(position_weights.values())}
+    print(f"✅ EXITING dynamic_position_sizing() at {datetime.now().strftime('%H:%M:%S')}")
+    return result
 
 def walk_forward_optimization(data1: np.ndarray, data2: np.ndarray, training_window: int = 126) -> Dict:
+    print(f"🔄 ENTERING walk_forward_optimization() at {datetime.now().strftime('%H:%M:%S')}")
     results = []
     for start in range(training_window, len(data1) - training_window, training_window // 2):
         train_end = start + training_window
@@ -155,9 +160,13 @@ def walk_forward_optimization(data1: np.ndarray, data2: np.ndarray, training_win
         train_sharpe = np.random.normal(0.2, 0.4)
         test_sharpe = train_sharpe + np.random.normal(0, 0.2)
         results.append({'train_start': start - training_window, 'train_end': train_end, 'test_end': test_end, 'train_sharpe': train_sharpe, 'test_sharpe': test_sharpe, 'overfitting_ratio': test_sharpe / max(train_sharpe, 0.001)})
-    return {'walk_forward_results': results, 'avg_train_sharpe': np.mean([r['train_sharpe'] for r in results]), 'avg_test_sharpe': np.mean([r['test_sharpe'] for r in results]), 'stability_score': np.mean([r['overfitting_ratio'] for r in results])}
+    
+    result = {'walk_forward_results': results, 'avg_train_sharpe': np.mean([r['train_sharpe'] for r in results]), 'avg_test_sharpe': np.mean([r['test_sharpe'] for r in results]), 'stability_score': np.mean([r['overfitting_ratio'] for r in results])}
+    print(f"✅ EXITING walk_forward_optimization() at {datetime.now().strftime('%H:%M:%S')}")
+    return result
 
 def calculate_all_ratios(backtest_result: Dict, initial_capital: int = 1_000_000, years: float = 9) -> Dict:
+    print(f"📊 ENTERING calculate_all_ratios() at {datetime.now().strftime('%H:%M:%S')}")
     total_return = backtest_result['total_return']
     total_return_pct = total_return / initial_capital
     annualized_return = ((1 + total_return_pct) ** (1/years)) - 1
@@ -174,7 +183,9 @@ def calculate_all_ratios(backtest_result: Dict, initial_capital: int = 1_000_000
     information_ratio = excess_return / max(tracking_error, 0.001)
     beta = 1.0
     treynor_ratio = (annualized_return - risk_free_rate) / beta
-    return {'sharpe_ratio': sharpe_ratio, 'sortino_ratio': sortino_ratio, 'treynor_ratio': treynor_ratio, 'information_ratio': information_ratio, 'calmar_ratio': calmar_ratio, 'annualized_return': annualized_return, 'total_return_pct': total_return_pct}
+    result = {'sharpe_ratio': sharpe_ratio, 'sortino_ratio': sortino_ratio, 'treynor_ratio': treynor_ratio, 'information_ratio': information_ratio, 'calmar_ratio': calmar_ratio, 'annualized_return': annualized_return, 'total_return_pct': total_return_pct}
+    print(f"✅ EXITING calculate_all_ratios() at {datetime.now().strftime('%H:%M:%S')}")
+    return result
 
 def ensemble_optimization_with_regime_detection():
     print(f"🚀 ENTERING ensemble_optimization_with_regime_detection() at {datetime.now().strftime('%H:%M:%S')}")

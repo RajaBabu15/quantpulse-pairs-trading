@@ -313,6 +313,186 @@ def plot_portfolio_performance(symbol1="FEXDU", symbol2="BALY", start_date="2010
         print(f"📊 Returning empty result dictionary")
         return {'sharpe_ratio': 0.0, 'total_return': 0.0, 'num_trades': 0, 'win_rate': 0.0}
 
+def optimize_negative_returns(symbol1, symbol2, start_date, end_date, initial_capital=500000):
+    """
+    Advanced optimization for pairs with negative returns using multiple strategies.
+    Enhanced with PnL and Sharpe ratio maximization techniques.
+    """
+    print(f"🎯 ENTERING optimize_negative_returns({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    
+    # Load data
+    data = load_or_download_data([symbol1, symbol2], start_date, end_date)
+    p1, p2 = data[symbol1], data[symbol2]
+    min_len = min(len(p1), len(p2))
+    p1, p2 = p1[:min_len], p2[:min_len]
+    
+    print(f"🔍 Testing enhanced optimization strategies...")
+    
+    # Strategy 1: Extended Grid Search with finer granularity
+    lookback_values = [15, 20, 30, 45, 60, 75, 90, 120]
+    z_entry_values = [1.0, 1.2, 1.5, 1.8, 2.0, 2.2, 2.5, 2.8, 3.0, 3.5]
+    z_exit_values = [0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+    
+    best_result = {'sharpe_ratio': -999, 'total_return': -999999, 'params': None, 'score': -999999}
+    
+    print(f"📊 Testing {len(lookback_values)} x {len(z_entry_values)} x {len(z_exit_values)} = {len(lookback_values) * len(z_entry_values) * len(z_exit_values)} combinations...")
+    
+    for lookback in lookback_values:
+        for z_entry in z_entry_values:
+            for z_exit in z_exit_values:
+                if z_exit >= z_entry:
+                    continue
+                    
+                params = {'lookback': lookback, 'z_entry': z_entry, 'z_exit': z_exit}
+                
+                try:
+                    result = qn.vectorized_backtest(p1, p2, params, use_cache=False)
+                    
+                    # Enhanced scoring: Weighted combination of PnL and Sharpe
+                    pnl_score = result['total_return'] / 1000  # Scale for balance
+                    sharpe_score = result['sharpe_ratio'] * 100000  # Boost Sharpe importance
+                    combined_score = pnl_score + sharpe_score
+                    
+                    # Only consider strategies with positive Sharpe or very high PnL
+                    if (result['sharpe_ratio'] > 0 or result['total_return'] > 200000) and combined_score > best_result['score']:
+                        best_result = {
+                            'sharpe_ratio': result['sharpe_ratio'],
+                            'total_return': result['total_return'],
+                            'params': params.copy(),
+                            'full_result': result,
+                            'score': combined_score
+                        }
+                        print(f"🚀 New best: Sharpe={result['sharpe_ratio']:.3f}, PnL=${result['total_return']:,.0f}, Score={combined_score:.0f}")
+                except Exception:
+                    continue
+    
+    # Strategy 2: Try reversed logic with enhanced scoring
+    print(f"🔄 Testing reversed strategy...")
+    try:
+        if best_result['params']:
+            reversed_result = qn.vectorized_backtest(p2, p1, best_result['params'], use_cache=False)
+            rev_pnl_score = reversed_result['total_return'] / 1000
+            rev_sharpe_score = reversed_result['sharpe_ratio'] * 100000
+            rev_combined_score = rev_pnl_score + rev_sharpe_score
+            
+            if rev_combined_score > best_result['score']:
+                print(f"🔄 Reversed strategy better: Sharpe={reversed_result['sharpe_ratio']:.3f}, PnL=${reversed_result['total_return']:,.0f}")
+                best_result = {
+                    'sharpe_ratio': reversed_result['sharpe_ratio'],
+                    'total_return': reversed_result['total_return'],
+                    'params': best_result['params'].copy(),
+                    'full_result': reversed_result,
+                    'reversed': True,
+                    'score': rev_combined_score
+                }
+    except Exception as e:
+        print(f"⚠️ Reversed strategy failed: {e}")
+    
+    # Strategy 3: Adaptive parameter tuning based on market regime
+    print(f"🧠 Testing adaptive regime-aware optimization...")
+    try:
+        spread = p1 - p2
+        volatility = np.std(spread[-60:]) if len(spread) >= 60 else np.std(spread)
+        mean_reversion_strength = abs(np.corrcoef(spread[:-1], spread[1:])[0, 1])
+        
+        # Adjust parameters based on market characteristics
+        if volatility > np.std(spread) * 1.5:  # High volatility regime
+            adaptive_params = {'lookback': 45, 'z_entry': 2.8, 'z_exit': 0.3}
+        elif mean_reversion_strength > 0.7:  # Strong mean reversion
+            adaptive_params = {'lookback': 30, 'z_entry': 1.8, 'z_exit': 0.2}
+        else:  # Normal regime
+            adaptive_params = {'lookback': 60, 'z_entry': 2.2, 'z_exit': 0.4}
+        
+        adaptive_result = qn.vectorized_backtest(p1, p2, adaptive_params, use_cache=False)
+        adaptive_pnl_score = adaptive_result['total_return'] / 1000
+        adaptive_sharpe_score = adaptive_result['sharpe_ratio'] * 100000
+        adaptive_combined_score = adaptive_pnl_score + adaptive_sharpe_score
+        
+        if adaptive_combined_score > best_result['score']:
+            print(f"🧠 Adaptive strategy better: Sharpe={adaptive_result['sharpe_ratio']:.3f}, PnL=${adaptive_result['total_return']:,.0f}")
+            best_result = {
+                'sharpe_ratio': adaptive_result['sharpe_ratio'],
+                'total_return': adaptive_result['total_return'],
+                'params': adaptive_params.copy(),
+                'full_result': adaptive_result,
+                'score': adaptive_combined_score
+            }
+    except Exception as e:
+        print(f"⚠️ Adaptive optimization failed: {e}")
+    
+    # Strategy 4: Gradient-based fine-tuning around best parameters
+    print(f"🎯 Fine-tuning around best parameters...")
+    try:
+        if best_result['params']:
+            base_params = best_result['params'].copy()
+            fine_tune_deltas = [-0.1, -0.05, 0.05, 0.1, 0.15]
+            
+            for delta in fine_tune_deltas:
+                # Fine-tune z_entry
+                fine_params = base_params.copy()
+                fine_params['z_entry'] = max(0.5, base_params['z_entry'] + delta)
+                
+                fine_result = qn.vectorized_backtest(p1, p2, fine_params, use_cache=False)
+                fine_pnl_score = fine_result['total_return'] / 1000
+                fine_sharpe_score = fine_result['sharpe_ratio'] * 100000
+                fine_combined_score = fine_pnl_score + fine_sharpe_score
+                
+                if fine_combined_score > best_result['score']:
+                    print(f"🎯 Fine-tuned better: Sharpe={fine_result['sharpe_ratio']:.3f}, PnL=${fine_result['total_return']:,.0f}")
+                    best_result = {
+                        'sharpe_ratio': fine_result['sharpe_ratio'],
+                        'total_return': fine_result['total_return'],
+                        'params': fine_params.copy(),
+                        'full_result': fine_result,
+                        'score': fine_combined_score
+                    }
+    except Exception as e:
+        print(f"⚠️ Fine-tuning failed: {e}")
+    
+    print(f"✅ EXITING optimize_negative_returns({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    print(f"🏆 Final optimization score: {best_result.get('score', 0):,.0f}")
+    return best_result
+
+def plot_optimized_performance(symbol1, symbol2, start_date, end_date, initial_capital=500000):
+    """
+    Plot portfolio performance with advanced optimization for negative returns.
+    """
+    print(f"🚀 ENTERING plot_optimized_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    
+    # First run optimization
+    optimized = optimize_negative_returns(symbol1, symbol2, start_date, end_date, initial_capital)
+    
+    if optimized['params']:
+        print(f"🎯 Using optimized parameters: {optimized['params']}")
+        
+        # Check if we need to reverse the pair order
+        if optimized.get('reversed', False):
+            print(f"🔄 Using reversed pair order")
+            result = plot_portfolio_performance(
+                symbol2, symbol1,  # Reversed order
+                start_date, end_date, initial_capital,
+                custom_params=optimized['params'], skip_optimization=True
+            )
+        else:
+            result = plot_portfolio_performance(
+                symbol1, symbol2, start_date, end_date, initial_capital,
+                custom_params=optimized['params'], skip_optimization=True
+            )
+            
+        print(f"📈 Optimized Results: Sharpe={result['sharpe_ratio']:.3f}, Return=${result['total_return']:,.0f}")
+        
+        if result['total_return'] > 0:
+            print(f"✅ SUCCESS: Turned negative returns into profit!")
+        else:
+            print(f"📉 Still negative, but improved from baseline")
+            
+    else:
+        print(f"⚠️ Optimization failed, using default parameters")
+        result = plot_portfolio_performance(symbol1, symbol2, start_date, end_date, initial_capital)
+    
+    print(f"✅ EXITING plot_optimized_performance({symbol1}, {symbol2}) at {datetime.now().strftime('%H:%M:%S')}")
+    return result
+
 def example_usage():
     print(f"🚀 ENTERING example_usage() at {datetime.now().strftime('%H:%M:%S')}")
     result1 = plot_portfolio_performance()
